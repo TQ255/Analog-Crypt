@@ -1,0 +1,1129 @@
+<!doctype html><html lang="nl"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><link rel="icon" href="../favicon.svg">
+<title>Luxcrypt Camera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap">
+<style>
+/* Layout: one centred column like the front of a decoder box — screen in a bezel, a display strip, then control panels. Sister of VideoCrypt and Syster Cam: same box, ice-blue display. */
+:root{
+  --case:#c9c7c3;        /* warm grey decoder plastic */
+  --panel:#e1dfdb;
+  --ink:#1d1c1a;
+  --muted:#5f5b55;
+  --rule:#b2aea7;
+  --led:#d3352b;         /* standby LED red */
+  --vfd-bg:#060b12;      /* display glass */
+  --vfd:#9fd8ff;         /* ice-blue segments */
+  --vfd-dim:#3f6680;
+  --btn:#f3f2f0;
+  --btn-ink:#1d1c1a;
+  --focus:#2a6fdb;
+  --font-ui:"IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-vfd:"VT323", "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --case:#171614;--panel:#22201d;--ink:#e8e6e2;--muted:#a19c94;--rule:#3a3732;--led:#ff5d50;
+  --vfd-bg:#04070c;--vfd:#9fd8ff;--vfd-dim:#355a72;--btn:#2d2a26;--btn-ink:#e8e6e2;--focus:#7fb0ff;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --case:#171614;--panel:#22201d;--ink:#e8e6e2;--muted:#a19c94;--rule:#3a3732;--led:#ff5d50;
+  --vfd-bg:#04070c;--vfd:#9fd8ff;--vfd-dim:#355a72;--btn:#2d2a26;--btn-ink:#e8e6e2;--focus:#7fb0ff;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--case);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand h1{margin:0;font-family:var(--font-mono);font-weight:500;font-size:22px;letter-spacing:.32em;text-transform:uppercase;text-wrap:balance}
+.brand p{margin:0;color:var(--muted);font-size:14px;max-width:60ch}
+.standby{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.standby i{width:9px;height:9px;border-radius:50%;background:var(--led);box-shadow:0 0 8px var(--led)}
+
+.bezel{background:#000;border-radius:10px;padding:10px;box-shadow:inset 0 0 0 1px #2c2f34, 0 1px 0 rgba(255,255,255,.25)}
+canvas#out{display:block;width:100%;max-width:100%;aspect-ratio:768/592;height:auto;background:#000;border-radius:4px}
+
+.vfd{background:var(--vfd-bg);color:var(--vfd);font-family:var(--font-vfd);font-size:21px;line-height:1.1;letter-spacing:.06em;
+  padding:8px 12px;border-radius:6px;display:flex;flex-wrap:wrap;gap:4px 18px;text-transform:uppercase;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 6px rgba(159,216,255,.45)}
+.vfd span{white-space:nowrap}
+.vfd .dim{color:var(--vfd-dim);text-shadow:none}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--panel);padding:6px;border-radius:8px;border:1px solid var(--rule)}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 15px var(--font-ui);padding:10px 6px;border-radius:5px;cursor:pointer;letter-spacing:.02em}
+.tabs button[aria-selected="true"]{background:var(--btn);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.hint{margin:0;color:var(--muted);font-size:14px;max-width:65ch}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+fieldset{margin:0;border:1px solid var(--rule);background:var(--panel);border-radius:8px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+legend{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;border:1px solid var(--rule);background:var(--btn);color:var(--btn-ink);font:500 15px var(--font-ui);padding:9px 12px;border-radius:6px;cursor:pointer;min-height:42px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn[aria-pressed="true"]{background:var(--led);border-color:var(--led);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,label.toggle:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+
+.card{display:flex;flex-direction:column;gap:4px}
+.card label{font-size:13px;color:var(--muted)}
+.slot{display:flex;gap:6px;align-items:stretch}
+.slot input{flex:1;min-width:0;font:500 16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--btn);color:var(--ink)}
+.toggle{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
+.toggle input{width:20px;height:20px;flex:none;accent-color:var(--led)}
+.sys{display:flex;flex-direction:column;gap:8px}
+.sel{font:500 15px var(--font-ui);padding:8px 10px;border-radius:6px;border:1px solid var(--rule);background:var(--btn);color:var(--ink);min-height:42px;max-width:100%}
+.note{margin:0;font-size:13px;color:var(--muted)}
+.note.warn{color:var(--led)}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:12px}
+footer p{margin:0 0 6px;max-width:70ch}
+footer a{color:inherit}
+/* CRT filter: only for the eye, the canvas pixels (and so saving and recording) stay untouched */
+.screen{position:relative;border-radius:4px;overflow:hidden}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s}
+.bezel.crt{border-radius:22px;padding:14px}
+.bezel.crt .screen{border-radius:18px / 22px}
+.bezel.crt canvas#out{filter:blur(.45px) contrast(1.12) saturate(1.2) brightness(1.08)}
+.bezel.crt .screen::after{opacity:1;
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(0,0,0,.55) 100%),
+    linear-gradient(rgba(0,0,0,.32) 50%, rgba(0,0,0,0) 50%) 0 0 / 100% max(3px, calc(100% / 288)),
+    repeating-linear-gradient(90deg, rgba(255,40,40,.07) 0 1px, rgba(40,255,40,.07) 1px 2px, rgba(40,80,255,.07) 2px 3px),
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.10), rgba(255,255,255,0) 45%);
+  animation:crtflicker 0.12s steps(2) infinite}
+.screen canvas.crtgl{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:inherit}
+.bezel.crtgl{border-radius:22px;padding:14px}
+.bezel.crtgl .screen{border-radius:18px / 22px}
+.bezel.crtgl canvas#out{visibility:hidden}
+.bezel.crt.os canvas#out{transform:scale(1.124,1.098)}
+.range{width:100%;accent-color:var(--led)}
+.vcr{display:flex;flex-wrap:wrap;gap:6px}
+.vcr .btn{flex:1 1 0;min-width:0;padding-inline:4px;font-family:var(--font-mono),system-ui,sans-serif}
+.vcrpos{width:100%;accent-color:var(--led)}
+.counter{margin:0;font:500 15px var(--font-mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+@keyframes crtflicker{50%{filter:brightness(1.04)}}
+@media (prefers-reduced-motion: reduce){.bezel.crt .screen::after{animation:none}}
+@media (prefers-reduced-motion: reduce){.standby i{box-shadow:none}}
+.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.lang{display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:2px}.lang button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 12px var(--font-mono);letter-spacing:.08em;padding:5px 9px;border-radius:4px;cursor:pointer;min-height:28px}.lang button[aria-pressed="true"]{background:var(--btn);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.25)}.lang button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Luxcrypt&nbsp;Cam</h1>
+      <p>Scramble je eigen foto's en video's zoals RTL 4 en RTL 5 rond 1990: de lijnsync vervangen door een burst, en het hele beeld op willekeurige momenten in negatief.</p>
+    </div>
+    <div class="hdr-r"><div class="lang" role="group" aria-label="Taal / Language" data-noi18n><button type="button" data-l="nl" lang="nl">NL</button><button type="button" data-l="en" lang="en">EN</button></div><div class="standby"><i></i><span id="ledtxt">Uitzending</span></div></div>
+  </header>
+
+  <div class="bezel" id="bezel"><div class="screen"><canvas id="out" width="768" height="592" aria-label="Beeld"></canvas></div></div>
+
+  <div class="vfd" id="vfd" aria-live="polite">
+    <span id="vfdFrame">Frame 00000</span><span id="vfdCard">EPROM --</span><span id="vfdPal">RTL 5 · inversie</span><span id="vfdSound">Geluid uit</span><span id="vfdMsg" class="dim">Testbeeld</span>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Weergave">
+    <button role="tab" id="tab-tx" aria-selected="true">Uitzending</button>
+    <button role="tab" id="tab-rx" aria-selected="false">Ontvanger</button>
+    <button role="tab" id="tab-crack" aria-selected="false">Piraat</button>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <div class="grid">
+    <fieldset>
+      <legend>Bron</legend>
+      <div class="row">
+        <button class="btn primary" id="btnCapture">Foto of video maken</button>
+        <button class="btn" id="btnPick">Bestand kiezen</button>
+        <button class="btn" id="btnTest">Testbeeld</button>
+        <button class="btn" id="btnLive">Live camera</button>
+      </div>
+      <p class="note" id="srcNote">Een opgeslagen gescrambeld beeld of filmpje wordt herkend aan de datastreep bovenin.</p>
+      <input type="file" id="cap" accept="image/*,video/*" capture="environment" hidden>
+      <input type="file" id="pick" accept="image/*,video/*" hidden>
+    </fieldset>
+
+    <fieldset id="fsVcr" hidden>
+      <legend>Videorecorder</legend>
+      <div class="vcr" role="group" aria-label="Videorecorder">
+        <button class="btn" id="vcrStart" title="Naar het begin" aria-label="Naar het begin">⏮</button>
+        <button class="btn" id="vcrRew" title="Terugspoelen (nog eens drukken voor sneller)" aria-label="Terugspoelen" aria-pressed="false">◀◀</button>
+        <button class="btn" id="vcrBack" title="Eén beeld terug" aria-label="Eén beeld terug">◀❙</button>
+        <button class="btn" id="vcrPlay" title="Afspelen" aria-label="Afspelen" aria-pressed="true">▶</button>
+        <button class="btn" id="vcrPause" title="Pauze" aria-label="Pauze" aria-pressed="false">❙❙</button>
+        <button class="btn" id="vcrFwd" title="Eén beeld vooruit" aria-label="Eén beeld vooruit">❙▶</button>
+        <button class="btn" id="vcrFf" title="Vooruitspoelen (nog eens drukken voor sneller)" aria-label="Vooruitspoelen" aria-pressed="false">▶▶</button>
+      </div>
+      <input type="range" class="vcrpos" id="vcrPos" min="0" max="1000" value="0" aria-label="Positie in de video">
+      <p class="counter" id="vcrTime">0:00:00 / 0:00:00</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>EPROM's</legend>
+      <div class="card">
+        <label for="txStation">Zender</label>
+        <select id="txStation" class="sel">
+          <option value="0">RTL 4: alleen sync vervangen</option>
+          <option value="1" selected>RTL 5: sync vervangen en beeld omgekeerd</option>
+          <option value="2">Veronica</option>
+          <option value="3">SBS 6</option>
+        </select>
+      </div>
+      <div class="card">
+        <label for="rxStation">EPROM in de decoder</label>
+        <div class="slot">
+          <select id="rxStation" class="sel" style="flex:1;min-width:0">
+            <option value="0">RTL 4</option>
+            <option value="1" selected>RTL 5 (ook Veronica en SBS 6)</option>
+            <option value="-1">Geen EPROM</option>
+          </select>
+          <button class="btn" id="btnEject" title="EPROM verwijderen">Eruit</button>
+        </div>
+      </div>
+      <p class="note">Geen smartcard: het geheim is een vaste tabel per zender in een EPROM van 8 kB (een 2764) in de decoder.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Signaal</legend>
+      <label class="toggle"><input type="checkbox" id="optFrame" checked> Elk beeld een ander stuk van de tabel</label>
+      <label class="toggle"><input type="checkbox" id="optCrt"> CRT-beeldbuis nabootsen</label>
+      <label class="toggle" id="lblOverscan" hidden><input type="checkbox" id="optOverscan" checked> Overscan: de randen en de datastreep vallen buiten beeld, zoals op een beeldbuis</label>
+      <label class="toggle"><input type="checkbox" id="optNeg"> Negatief: het beeld is alleen te zien als de scrambling aan staat</label>
+      <p class="note" id="sysNote"></p>
+      <label class="toggle" hidden><input type="checkbox" id="optSound"> Geluid scramblen</label>
+      <label class="toggle" hidden><input type="checkbox" id="optSrcSnd"> Bron al gescrambeld</label>
+      <div class="card" hidden>
+        <label for="optCarrier">Draaggolf voor de inversie</label>
+        <select id="optCarrier" class="sel">
+          <option value="0">12,8 kHz, zoals Canal+</option>
+          <option value="1">9 kHz</option>
+          <option value="2">6 kHz</option>
+          <option value="3">3 kHz</option>
+        </select>
+      </div>
+      <p class="note" id="soundNote">Luxcrypt liet het geluid ongemoeid: je hoort het altijd helder, met of zonder decoder. Het systeem kon digitaal PCM-geluid meesturen, maar dat werd niet gebruikt. Met "Live camera" hoor je ook de microfoon; dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.</p>
+      <label class="toggle" hidden><input type="checkbox" id="optRestore"> Geluidsversterking</label>
+      <div class="card" id="restoreBox" hidden>
+        <label for="optRestoreAmt">Sterkte <span id="restoreVal">12 dB</span></label>
+        <input type="range" class="range" id="optRestoreAmt" min="3" max="24" step="1" value="12">
+        <p class="note">Herstelt dun, zacht geluid van oude opnames en YouTube-video's. Bij het omkeren komt de bas uit het hoogste deel van het gescrambelde geluid, en dat deel is op videobanden en door compressie grotendeels verloren gegaan. De versterking haalt de lage en middentonen weer op en maakt het geheel luider. Voor een echte oude opname zonder datastreep: kies hem via "Bestand kiezen" en zet "Het geluid van de bron is al gescrambeld" aan. Op de Uitzending hoor je hem dan gescrambeld, in de Ontvanger (met kaart) en bij de Piraat omgedraaid. Zet daar eventueel Geluidsversterking bij.</p>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnSound" aria-pressed="false">Geluid aan</button>
+        <button class="btn" id="btnPause" aria-pressed="false">Pauze</button>
+      </div>
+      <div class="card" id="crackBox" hidden>
+        <label for="optCrack">Waar de piraat op let</label>
+        <select id="optCrack" class="sel">
+          <option value="edge">Het zwartniveau aan de randen van het beeld</option>
+          <option value="image">Alleen de gemiddelde helderheid van het beeld</option>
+        </select>
+        <div class="row"><button class="btn" id="btnCrack">Kraak dit beeld</button></div>
+      </div>
+    </fieldset>
+
+    <fieldset id="fsSave" hidden>
+      <legend>Opslaan</legend>
+      <div class="row">
+        <button class="btn" id="btnSave">Beeld opslaan (PNG)</button>
+        <button class="btn" id="btnRec" aria-pressed="false" hidden>Opnemen</button>
+      </div>
+      <p class="note" id="saveNote">Slaat op wat je nu ziet, zonder CRT-filter. Laad het later weer in om te ontsleutelen.</p>
+    </fieldset>
+  </div>
+
+  <footer>
+    <p>Luxcrypt werd rond 1990 gebruikt door RTL 4 en RTL 5 op de satelliet. Het haalde de horizontale synchronisatiepuls weg en zette er een korte burst van 4&nbsp;MHz voor in de plaats. Een tv zonder decoder kan de lijnen dan niet meer vastpakken: het beeld scheurt schuin weg. De decoder zoekt de burst en zet op die plek weer een sync neer. Daar is geen sleutel voor nodig.</p>
+    <p>RTL 5 keerde daarnaast het hele beeld om, en op willekeurige momenten weer terug. Omdat het hele signaal omkeert, draait ook de PAL-kleurdraaggolf een halve slag: het beeld wordt negatief en krijgt de complementaire kleuren. Wanneer dat gebeurt, staat in een vaste tabel in een EPROM. Veronica en SBS 6 gebruikten dezelfde codering als RTL 5, dus één decoder met de RTL 5-EPROM ving ze alle drie. Er is geen smartcard en geen sleutel die wisselt.</p>
+    <p>Bevestigd uit bronnen: de burst van 4 MHz, de inversie bij RTL 5 en niet bij RTL 4, geen smartcard, en snel volledig gekraakt met bouwschema's die rondgingen. Volgens forumleden zat de tabel in een 2764-EPROM. Aannames in deze app: hoe de tabel eruitzag (stukken van 3 tot 50 beelden normaal of negatief), hoe snel het beeld zonder sync wegloopt, en de zwarte randen van 6 pixels aan beide kanten van elke lijn.</p>
+    <p>De Piraat-modus heeft de EPROM niet nodig. De sync haalt hij net als de decoder uit de burst. Een negatief beeld verraadt zich aan het zwartniveau: de zwarte randen van de lijnen worden wit. Kies je "Alleen de gemiddelde helderheid", dan gokt hij: een beeld dat overwegend licht is, is waarschijnlijk negatief. Bij een donkere scène met veel lucht of sneeuw gaat dat mis.</p>
+    <p>Een Luxcrypt-decoder kon met een andere EPROM en wat aanpassingen ook FilmNet op de Nederlandse kabel (Cablecrypt) ontsleutelen. Hoe Cablecrypt precies werkte heb ik niet kunnen vinden; daarom zit het hier niet in.</p>
+    <p>De optie Negatief stuurt het beeld eerst door de decoder; op de zender zie je dan een helder beeld met alleen de burst schuin erdoor, en een kijker met decoder juist een gescrambeld beeld.</p>
+  </footer>
+</div>
+
+<!--i18n--><script>
+(() => {
+  const D = {"Uitzending": "Broadcast", "Beeld": "Picture", "Weergave": "View", "Ontvanger": "Receiver", "Piraat": "Pirate", "Bron": "Source", "Foto of video maken": "Take photo or video", "Bestand kiezen": "Choose file", "Testbeeld": "Test card", "Live camera": "Live camera", "Een opgeslagen gescrambeld beeld of filmpje wordt herkend aan de datastreep bovenin.": "A saved scrambled picture or clip is recognised by the data stripe at the top.", "Videorecorder": "Video recorder", "Naar het begin": "Back to start", "Terugspoelen (nog eens drukken voor sneller)": "Rewind (press again for faster)", "Terugspoelen": "Rewind", "Eén beeld terug": "One frame back", "Afspelen": "Play", "Pauze": "Pause", "Verder": "Resume", "Eén beeld vooruit": "One frame forward", "Vooruitspoelen (nog eens drukken voor sneller)": "Fast forward (press again for faster)", "Vooruitspoelen": "Fast forward", "Positie in de video": "Position in the video", "Smartcards": "Smartcards", "Kaarten": "Cards", "Kaart in de zender": "Card in the transmitter", "Kaart in de ontvanger": "Card in the receiver", "Kaart in de decoder": "Card in the decoder", "Kaart verwijderen": "Remove card", "Kaart erin doen": "Insert card", "Eruit": "Out", "Erin": "In", "Signaal": "Signal", "Systeem": "System", "CRT-beeldbuis nabootsen": "Simulate a CRT picture tube", "Overscan: de randen en de datastreep vallen buiten beeld, zoals op een beeldbuis": "Overscan: the edges and the data stripe fall outside the screen, as on a picture tube", "Negatief: het beeld is alleen te zien als de scrambling aan staat": "Negative: the picture is only visible while scrambling is on", "Geluid scramblen met spectrale inversie": "Scramble the sound with spectral inversion", "Het geluid van de bron is al gescrambeld (echte oude opname)": "The source sound is already scrambled (a real old recording)", "Draaggolf voor de inversie": "Carrier for the inversion", "Geluidsversterking": "Sound restoration", "Sterkte": "Strength", "Geluid aan": "Sound on", "Geluid uit": "Sound off", "Kraak dit beeld": "Crack this picture", "Opslaan": "Save", "Beeld opslaan (PNG)": "Save picture (PNG)", "Opnemen": "Record", "Stop opname": "Stop recording", "Slaat op wat je nu ziet, zonder CRT-filter. Laad het later weer in om te ontsleutelen.": "Saves what you see now, without the CRT filter. Load it again later to decode it.", "PAL aan": "PAL on", "PAL uit": "PAL off", "Kaart --": "Card --", "Kaart OK": "Card OK", "Geen kaart": "No card", "Verkeerde kaart": "Wrong card", "Geen kaart nodig": "No card needed", "Geen signaal": "No signal", "Bron al gescrambeld": "Source already scrambled", "Geluid helder": "Sound clear", "Geluid versterkt": "Sound restored", "Geluid versleuteld": "Sound encrypted", "Geen geluid hier": "No sound here", "Tik op Pauze om af te spelen": "Tap Pause to play", "Dit bestand kan ik niet openen": "This file cannot be opened", "Live met geluid": "Live with sound", "Live": "Live", "Video": "Video", "Foto": "Photo", "Klaar": "Done", "Einde": "End", "Gekraakt": "Cracked", "Kraken mislukt": "Cracking failed", "Live camera wordt hier geblokkeerd. Gebruik \"Foto of video maken\": op een telefoon opent dat de camera.": "The live camera is blocked here. Use \"Take photo or video\": on a phone that opens the camera.", "Niet opgeslagen.": "Not saved.", "Er staat al een opslagvraag open.": "A save request is already open.", "Opslaan lukt hier niet.": "Saving does not work here.", "Opnemen wordt hier niet ondersteund.": "Recording is not supported here.", "Herstelt dun, zacht geluid van oude opnames en YouTube-video's. Bij het omkeren komt de bas uit het hoogste deel van het gescrambelde geluid, en dat deel is op videobanden en door compressie grotendeels verloren gegaan. De versterking haalt de lage en middentonen weer op en maakt het geheel luider. Voor een echte oude opname zonder datastreep: kies hem via \"Bestand kiezen\" en zet \"Het geluid van de bron is al gescrambeld\" aan. Op de Uitzending hoor je hem dan gescrambeld, in de Ontvanger (met kaart) en bij de Piraat omgedraaid. Zet daar eventueel Geluidsversterking bij.": "Restores thin, quiet sound from old recordings and YouTube videos. When the spectrum is turned back, the bass comes from the top of the scrambled sound, and that part was largely lost on videotape and through compression. The restoration lifts the low and middle tones and makes the whole louder. For a real old recording without a data stripe: choose it with \"Choose file\" and switch on \"The source sound is already scrambled\". On Broadcast you then hear it scrambled; in the Receiver (with a card) and for the Pirate it is turned back. Add Sound restoration there if needed.", "Wat een abonnee ziet. Zelfde kaart als de zender geeft een helder beeld; een andere kaart niet; zonder kaart verschijnt de bekende melding.": "What a subscriber sees. The same card as the transmitter gives a clear picture; another card does not; without a card the familiar message appears.", "Wat de piraat weet": "What the pirate knows", "Elk beeld een nieuwe volgorde": "A new order every frame", "PAL-kleurfout nabootsen": "Simulate the PAL colour error", "Beelden doortellen": "Count frames", "VideoCrypt Cam": "VideoCrypt Cam", "Scramble je eigen foto's en video's zoals Sky in 1990: elke beeldlijn geknipt op een van 256 punten en rondgedraaid.": "Scramble your own photos and videos the way Sky did in 1990: every picture line cut at one of 256 points and rotated.", "PAL-kleurdraaiing nabootsen": "Simulate the PAL colour rotation", "Elk beeld nieuwe snijpunten": "New cut points every frame", "VideoCrypt: elke lijn rondgedraaid": "VideoCrypt: every line rotated", "VideoCrypt, compressievriendelijk: blokken van 16 lijnen": "VideoCrypt, compression-friendly: blocks of 16 lines", "VideoCrypt S: lijnen gehusseld in blokken van 47": "VideoCrypt S: lines shuffled in blocks of 47", "12,51 kHz, zoals BBC Select": "12.51 kHz, as BBC Select", "Sky zond het geluid bij VideoCrypt onversleuteld uit. BBC Select draaide het spectrum om rond 12,51 kHz: lage tonen werden hoog en andersom. Met een lagere draaggolf valt alles boven die frequentie weg en klinkt het als een telefoonlijn. Met \"Live camera\" gaat ook het geluid van de microfoon door de scrambling. Dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.": "Sky sent the sound unencrypted with VideoCrypt. BBC Select inverted the spectrum around 12.51 kHz: low tones became high and vice versa. With a lower carrier everything above that frequency is lost and it sounds like a telephone line. With \"Live camera\" the microphone sound also goes through the scrambling. That works on the website and when you open the page as a file, but not in the Claude version. Use headphones, or it will feed back.", "Doorlopend kraken": "Crack continuously", "Stop met kraken": "Stop cracking", "Hele video kraken": "Crack the whole video", "Gekraakte video afspelen": "Play cracked video", "Stop afspelen": "Stop playback", "Video gekraakt": "Video cracked", "VideoCrypt S was de variant die de BBC voor BBC Select gebruikte: geen lijnen rondgedraaid maar hele lijnen van plek gewisseld binnen blokken van 47, omdat lijnrotatie slecht tegen echo's bij antenne-ontvangst kon.": "VideoCrypt S was the variant the BBC used for BBC Select: no lines rotated, but whole lines swapped within blocks of 47, because line rotation coped badly with echoes in aerial reception.", "Het snijpunt of de lijnvolgorde komt uit een pseudo-willekeurige reeks met de kaartcode als sleutel, zoals bij de echte smartcard. Het framenummer en een kaartcontrole staan als datastreep in de bovenste lijnen, net als de VBI-data van VideoCrypt.": "The cut point or line order comes from a pseudo-random sequence keyed by the card code, as with the real smartcard. The frame number and a card check sit as a data stripe in the top lines, like VideoCrypt's VBI data.", "Net als bij echt VideoCrypt blijft het meest linkse stukje van elke lijn ongescrambeld. Op een beeldbuis-tv viel dat weg achter de rand van het scherm, maar een tv-kaart liet het zien.": "As with real VideoCrypt, the leftmost bit of each line stays unscrambled. On a CRT television it was hidden behind the edge of the screen, but a TV card showed it.", "De Piraat-modus kraakt een beeld zonder kaart door elke lijn te vergelijken met de vorige, naar de methode van Markus Kuhn (AntiSky, 1994). Voor VideoCrypt gebruikt hij ook die ongescrambelde rand: de eerste rondgedraaide pixel moet er netjes op aansluiten. Als beveiliging is dit dus niets waard.": "Pirate mode cracks a picture without a card by comparing each line with the one before, after Markus Kuhn's method (AntiSky, 1994). For VideoCrypt it also uses the unscrambled edge: the first rotated pixel has to continue it neatly. As security this is worth nothing.", "In de Piraat-modus kan de kraker ook doorlopend werken, zoals de pc-decoders met een tv-kaart rond 1995. Hij kraakt dan zo snel als de computer toelaat, een paar beelden per seconde. Hele video kraken loopt een geladen filmpje beeld voor beeld door en speelt het resultaat daarna op normale snelheid af.": "In Pirate mode the cracker can also run continuously, like the PC decoders with a TV card around 1995. It then cracks as fast as the computer allows, a few frames per second. Crack the whole video steps through a loaded clip frame by frame and then plays the result back at normal speed.", "De optie Negatief draait de rollen om. Het beeld gaat eerst door de decoder en daarna door de scrambler, die het precies weer in elkaar zet. Op de zender zie je dan het heldere beeld, zonder kaart ook. Een abonnee met de juiste kaart krijgt juist een gescrambeld beeld.": "The Negative option swaps the roles. The picture first goes through the decoder and then through the scrambler, which puts it exactly back together. On the transmitter you then see the clear picture, even without a card. A subscriber with the right card gets a scrambled picture instead.", "Het geluid van het testbeeld is een eigen herkenningsmelodie. Spectrale inversie heeft geen sleutel: de Piraat-modus draait het spectrum gewoon nog een keer om.": "The test card sound is an original ident. Spectral inversion has no key: Pirate mode simply inverts the spectrum once more.", "VC blok": "VC block", "Wat de satelliet uitzendt: elke lijn rondgedraaid, bovenin de datastreep met framenummer.": "What the satellite sends out: every line rotated, with the data stripe and frame number at the top.", "Wat een abonnee ziet. Zelfde code als de zender geeft een helder beeld; een andere code niet; geen kaart geeft de bekende melding.": "What a subscriber sees. The same code as the transmitter gives a clear picture; another code does not; no card gives the familiar message.", "Zonder kaart: de computer zoekt per lijn het snijpunt door hem met de vorige lijn te vergelijken. Werkt het best op beelden met veel structuur.": "Without a card: the computer finds the cut point of each line by comparing it with the line before. Works best on pictures with lots of structure.", "Zoals Sky het uitzond: elke lijn op een van 256 punten geknipt.": "As Sky broadcast it: every line cut at one of 256 points.", "Voor video die je wilt opnemen en later ontsleutelen. Grover beeld, makkelijker te kraken.": "For video you want to record and decode later. Coarser picture, easier to crack.", "Zoals BBC Select: hele lijnen verwisseld binnen vaste blokken van 47. Een verplaatste lijn krijgt ook een kleurfout.": "As BBC Select: whole lines swapped within fixed blocks of 47. A moved line also gets a colour error.", "Syster Cam": "Syster Cam", "Scramble je eigen foto's en video's zoals Canal+ en Premiere in de jaren 90: per veld 287 beeldlijnen door elkaar gehusseld via een buffer van 32 lijnen.": "Scramble your own photos and videos the way Canal+ and Premiere did in the 1990s: 287 picture lines per field shuffled through a 32-line buffer.", "De kaart levert het controlewoord. Daaruit volgt per veld een seed van 15 bits, en daaruit de lijnvolgorde.": "The card supplies the control word. From it follows a 15-bit seed per field, and from that the line order.", "Syster, sleuteltabel 1 (Premiere)": "Syster, key table 1 (Premiere)", "Syster, sleuteltabel 2 (Canal+ Frankrijk)": "Syster, key table 2 (Canal+ France)", "Smartcrypt: Syster plus knippen en draaien, snijpunten uit dezelfde seed": "Smartcrypt: Syster plus cut and rotate, cut points from the same seed", "Smartcrypt met sterke sleutel: snijpunten uit de kaart": "Smartcrypt with a strong key: cut points from the card", "Syster, compressievriendelijk: blokken van 16 lijnen": "Syster, compression-friendly: blocks of 16 lines", "Discret 11: elke lijn 0, 1 of 2 stappen vertraagd": "Discret 11: every line delayed by 0, 1 or 2 steps", "12,8 kHz, zoals Canal+ en Premiere": "12.8 kHz, as Canal+ and Premiere", "Syster en Discret 11 draaiden het geluid om rond 12,8 kHz: lage tonen werden hoog en andersom. Met een lagere draaggolf valt alles boven die frequentie weg en klinkt het als een telefoonlijn. Met \"Live camera\" gaat ook het geluid van de microfoon door de scrambling. Dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.": "Syster and Discret 11 inverted the sound around 12.8 kHz: low tones became high and vice versa. With a lower carrier everything above that frequency is lost and it sounds like a telephone line. With \"Live camera\" the microphone sound also goes through the scrambling. That works on the website and when you open the page as a file, but not in the Claude version. Use headphones, or it will feed back.", "Het algoritme en de sleuteltabel": "The algorithm and the key table", "Alleen het beeld": "Only the picture", "Syster (Nagravision, analoog) verwisselt hele lijnen binnen een veld. Elk veld telt 287 gescrambelde lijnen. Een sleuteltabel van 256 waarden kiest bij elke lijn een van 32 vakjes in een buffer; de nieuwe lijn gaat erin en de lijn die er al in zat komt eruit. De tabel wordt doorlopen vanaf startpunt r met stap 2s+1. Samen zijn r en s 15 bits, dus 32.768 mogelijke volgordes per veld.": "Syster (analogue Nagravision) swaps whole lines within a field. Each field has 287 scrambled lines. A key table of 256 values picks one of 32 slots in a buffer for every line; the new line goes in and the line already there comes out. The table is walked from start point r with step 2s+1. Together r and s are 15 bits, so 32,768 possible orders per field.", "De seed is elk veld anders. Hij komt uit twee schuifregisters die elke 25 beelden opnieuw beginnen met het controlewoord van de kaart. Hier is de kaartcode de sleutel, en elke 50 beelden komt er een nieuw controlewoord, zoals in hacktv.": "The seed is different for every field. It comes from two shift registers that restart every 25 frames from the card's control word. Here the card code is the key, and every 50 frames brings a new control word, as in hacktv.", "Bij PAL verhuist alleen het beeld en blijft de kleurburst op zijn plek. Een lijn die n lijnen verschuift, krijgt daardoor een tintfout van n × 270,576°, en bij een oneven n staat de PAL-schakelaar verkeerd om. De decoder zet de lijnen terug en de kleur klopt weer.": "With PAL only the picture moves and the colour burst stays in place. A line moved by n lines therefore gets a hue error of n × 270.576°, and for odd n the PAL switch is the wrong way round. The decoder puts the lines back and the colour is right again.", "Vereenvoudigingen: echte Syster stuurt in de onderste 32 lijnen al lijnen van het volgende veld mee. Hier blijven die in hetzelfde veld, zodat elk opgeslagen beeld op zichzelf te ontsleutelen is. De onderste lijn van elk veld blijft ongescrambeld, zoals lijn 310 en 623. De datastreep bovenin staat voor de VBI-data, die in het echt op lijnen 14, 15, 327 en 328 liep met ECM's, EMM's en vlaggen zoals de sleuteltabel en de geluidsfrequentie.": "Simplifications: real Syster already sends lines of the next field in the bottom 32 lines. Here they stay in the same field, so every saved picture can be decoded on its own. The bottom line of each field stays unscrambled, like lines 310 and 623. The data stripe at the top stands for the VBI data, which in reality ran on lines 14, 15, 327 and 328 with ECMs, EMMs and flags such as the key table and the sound frequency.", "De Piraat-modus doet wat Cryptimage en Xawdecode deden: omdat de sleuteltabel bekend is, probeert hij alle 32.768 seeds per veld en kiest het gladste beeld. Met de goede seed ligt ook de verschuiving van elke lijn vast, dus hij draait de tintfout exact terug en levert een kleurenbeeld. Kies je \"Alleen het beeld\", dan gebruikt hij alleen dat de buffer 32 lijnen groot is: elke volgende lijn moet een van de 32 zijn die nog wachten, en hij kiest de lijn die het best aansluit. Op foto's klopt dan meestal 60 tot 80 procent van de lijnen; bij veel lucht of effen vlakken, en op een testbeeld met veel gelijke lijnen, veel minder.": "Pirate mode does what Cryptimage and Xawdecode did: because the key table is known, it tries all 32,768 seeds per field and picks the smoothest picture. With the right seed the shift of every line is fixed too, so it undoes the hue error exactly and delivers a colour picture. If you choose \"Only the picture\", it only uses the fact that the buffer is 32 lines deep: each next line must be one of the 32 still waiting, and it picks the line that fits best. On photos usually 60 to 80 percent of the lines are right; with lots of sky or plain areas, and on a test card with many identical lines, far fewer.", "Discret 11, de voorganger uit 1984, verschoof lijnen 0, 902 of 1804 nanoseconden naar rechts, gekozen door een schuifregister van 11 bits. 902 ns is precies vier perioden van de PAL-kleurdraaggolf, dus de kleur blijft goed. De rechterrand valt in de overscan. Met maar 2047 sleutels is hij in een oogwenk te kraken.": "Discret 11, the predecessor from 1984, shifted lines 0, 902 or 1804 nanoseconds to the right, chosen by an 11-bit shift register. 902 ns is exactly four periods of the PAL colour subcarrier, so the colour stays right. The right edge falls in the overscan. With only 2047 keys it is cracked in an instant.", "Smartcrypt is Syster met daarbovenop knippen en draaien zoals VideoCrypt. Dat bestond echt, deels: hacktv kent de optie \"Syster cut and rotate\" (intern Smartcrypt, daar nog onaf), en in de Syster-data zit een vlag die op sommige decoders knippen en draaien aanzet. Hoe de echte snijpunten werden gekozen is niet bekend; die van deze app zijn eigen werk. Voor de hardware was het bijna gratis: de decoder had de lijnen al in een geheugen staan en hoefde alleen op een ander punt te beginnen met uitlezen.": "Smartcrypt is Syster with VideoCrypt-style cut and rotate on top. It really existed, in part: hacktv has the option \"Syster cut and rotate\" (internally Smartcrypt, still unfinished there), and the Syster data carries a flag that switches on cut and rotate in some decoders. How the real cut points were chosen is not known; the ones in this app are our own. For the hardware it was almost free: the decoder already held the lines in memory and only had to start reading at a different point.", "Kraken wordt lastiger, want de piraat moet nu tegelijk de volgorde en de verschuiving van elke lijn vinden. Deze piraat vergelijkt lijnen eerst op iets wat ronddraaien niet verandert: hoe sterk elke ruimtelijke frequentie in de lijn voorkomt. Zo vindt hij de volgorde, en met de zwakke variant via alle 32.768 seeds meteen ook alle snijpunten. Bij de sterke variant zoekt hij de snijpunten daarna lijn voor lijn, zoals AntiSky bij VideoCrypt. Twee zwakke systemen op elkaar maken samen nog geen sterk systeem; dat lukt pas als ook de sleutel sterk is.": "Cracking gets harder, because the pirate now has to find the order and the shift of every line at once. This pirate first compares lines on something rotation does not change: how strongly each spatial frequency occurs in the line. That gives the order, and with the weak variant, through all 32,768 seeds, every cut point as well. With the strong variant it then finds the cut points line by line, like AntiSky did for VideoCrypt. Two weak systems stacked do not make a strong one; that only happens when the key is strong too.", "De compressievriendelijke modus is een eigen variant: blokken van 16 lijnen door een buffer van 8, zodat een opgenomen filmpje de videocompressie overleeft. De optie Negatief stuurt het beeld eerst door de decoder; op de zender zie je dan een helder beeld en een abonnee met de juiste kaart juist een gescrambeld beeld.": "The compression-friendly mode is our own variant: blocks of 16 lines through a buffer of 8, so a recorded clip survives video compression. The Negative option sends the picture through the decoder first; on the transmitter you then see a clear picture, and a subscriber with the right card a scrambled one.", "Bronnen: hacktv (fsphil, Alex James), Cryptimage, Michael Niedermayer, Fabien Sanglard, en de analyse van Markus Kuhn uit 1998.": "Sources: hacktv (fsphil, Alex James), Cryptimage, Michael Niedermayer, Fabien Sanglard, and Markus Kuhn's 1998 analysis.", "Syster blok": "Syster block", "kleur intact": "colour intact", "Wat de zender uitstuurt: de lijnen van elk veld door elkaar, bovenin de datastreep met framenummer en vlaggen.": "What the transmitter sends out: the lines of each field shuffled, with the data stripe, frame number and flags at the top.", "Zonder kaart: de computer zoekt de lijnvolgorde terug uit het beeld zelf, zoals de piratensoftware van toen.": "Without a card: the computer works out the line order from the picture itself, like the pirate software of the day.", "Zoals Premiere in Duitsland: per veld 287 lijnen gehusseld met de standaard sleuteltabel.": "As Premiere in Germany: 287 lines per field shuffled with the standard key table.", "Zoals Canal+ Frankrijk vanaf oktober 1997: dezelfde methode met een andere sleuteltabel.": "As Canal+ France from October 1997: the same method with a different key table.", "Elke lijn wordt verplaatst én op een van 256 punten doorgeknipt en rondgedraaid. Het snijpunt komt uit dezelfde seed van 15 bits als de volgorde, dus wie de seed vindt, heeft alles.": "Every line is moved and also cut at one of 256 points and rotated. The cut point comes from the same 15-bit seed as the order, so whoever finds the seed has everything.", "Zelfde methode, maar het snijpunt komt uit de sleutel van de kaart. De volgorde blijft zwak; de snijpunten moet een piraat uit het beeld halen.": "The same method, but the cut point comes from the card's key. The order stays weak; a pirate has to get the cut points from the picture.", "Voor video die je wilt opnemen en later ontsleutelen: hele blokken van 16 lijnen wisselen van plek. Grover, en makkelijker te kraken.": "For video you want to record and decode later: whole blocks of 16 lines change place. Coarser, and easier to crack.", "Zoals Canal+ in de jaren 80: lijnen blijven op hun plek maar schuiven 0, 902 of 1804 ns op. De kleur blijft goed.": "As Canal+ in the 1980s: lines stay in place but shift by 0, 902 or 1804 ns. The colour stays right.", "Luxcrypt Cam": "Luxcrypt Cam", "Scramble je eigen foto's en video's zoals RTL 4 en RTL 5 rond 1990: de lijnsync vervangen door een burst, en het hele beeld op willekeurige momenten in negatief.": "Scramble your own photos and videos the way RTL 4 and RTL 5 did around 1990: the line sync replaced by a burst, and the whole picture turned negative at random moments.", "EPROM --": "EPROM --", "EPROM's": "EPROMs", "Zender": "Station", "RTL 4: alleen sync vervangen": "RTL 4: sync replaced only", "RTL 5: sync vervangen en beeld omgekeerd": "RTL 5: sync replaced and picture inverted", "EPROM in de decoder": "EPROM in the decoder", "RTL 5 (ook Veronica en SBS 6)": "RTL 5 (also Veronica and SBS 6)", "Geen EPROM": "No EPROM", "EPROM verwijderen": "Remove EPROM", "EPROM erin doen": "Insert EPROM", "Geen smartcard: het geheim is een vaste tabel per zender in een EPROM van 8 kB (een 2764) in de decoder.": "No smartcard: the secret is a fixed table per station in an 8 kB EPROM (a 2764) in the decoder.", "Elk beeld een ander stuk van de tabel": "A different part of the table every frame", "Luxcrypt liet het geluid ongemoeid: je hoort het altijd helder, met of zonder decoder. Het systeem kon digitaal PCM-geluid meesturen, maar dat werd niet gebruikt. Met \"Live camera\" hoor je ook de microfoon; dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.": "Luxcrypt left the sound alone: you always hear it clearly, with or without a decoder. The system could carry digital PCM sound, but that was not used. With \"Live camera\" you also hear the microphone; that works on the website and when you open the page as a file, but not in the Claude version. Use headphones, or it will feed back.", "Waar de piraat op let": "What the pirate looks at", "Het zwartniveau aan de randen van het beeld": "The black level at the edges of the picture", "Alleen de gemiddelde helderheid van het beeld": "Only the average brightness of the picture", "Luxcrypt werd rond 1990 gebruikt door RTL 4 en RTL 5 op de satelliet. Het haalde de horizontale synchronisatiepuls weg en zette er een korte burst van 4 MHz voor in de plaats. Een tv zonder decoder kan de lijnen dan niet meer vastpakken: het beeld scheurt schuin weg. De decoder zoekt de burst en zet op die plek weer een sync neer. Daar is geen sleutel voor nodig.": "Luxcrypt was used around 1990 by RTL 4 and RTL 5 on satellite. It removed the horizontal sync pulse and put a short 4 MHz burst in its place. A TV without a decoder can no longer lock onto the lines: the picture tears away at a slant. The decoder finds the burst and puts a sync back in that place. No key is needed for that.", "RTL 5 keerde daarnaast het hele beeld om, en op willekeurige momenten weer terug. Omdat het hele signaal omkeert, draait ook de PAL-kleurdraaggolf een halve slag: het beeld wordt negatief en krijgt de complementaire kleuren. Wanneer dat gebeurt, staat in een vaste tabel in een EPROM. Veronica en SBS 6 gebruikten dezelfde codering als RTL 5, dus één decoder met de RTL 5-EPROM ving ze alle drie. Er is geen smartcard en geen sleutel die wisselt.": "RTL 5 also inverted the whole picture, and switched back at random moments. Because the whole signal inverts, the PAL colour subcarrier turns half a cycle too: the picture goes negative with complementary colours. When that happens is set in a fixed table in an EPROM. Veronica and SBS 6 used the same coding as RTL 5, so one decoder with the RTL 5 EPROM received all three. There is no smartcard and no changing key.", "Bevestigd uit bronnen: de burst van 4 MHz, de inversie bij RTL 5 en niet bij RTL 4, geen smartcard, en snel volledig gekraakt met bouwschema's die rondgingen. Volgens forumleden zat de tabel in een 2764-EPROM. Aannames in deze app: hoe de tabel eruitzag (stukken van 3 tot 50 beelden normaal of negatief), hoe snel het beeld zonder sync wegloopt, en de zwarte randen van 6 pixels aan beide kanten van elke lijn.": "Confirmed from sources: the 4 MHz burst, inversion on RTL 5 and not on RTL 4, no smartcard, and quickly and completely cracked with circuit diagrams that circulated. According to forum members the table sat in a 2764 EPROM. Assumptions in this app: what the table looked like (stretches of 3 to 50 frames normal or negative), how fast the picture drifts without sync, and the 6-pixel black edges on both sides of each line.", "De Piraat-modus heeft de EPROM niet nodig. De sync haalt hij net als de decoder uit de burst. Een negatief beeld verraadt zich aan het zwartniveau: de zwarte randen van de lijnen worden wit. Kies je \"Alleen de gemiddelde helderheid\", dan gokt hij: een beeld dat overwegend licht is, is waarschijnlijk negatief. Bij een donkere scène met veel lucht of sneeuw gaat dat mis.": "Pirate mode does not need the EPROM. Like the decoder, it takes the sync from the burst. A negative picture gives itself away by the black level: the black edges of the lines turn white. If you choose \"Only the average brightness\", it guesses: a mostly bright picture is probably negative. That goes wrong with a bright scene full of sky or snow.", "Een Luxcrypt-decoder kon met een andere EPROM en wat aanpassingen ook FilmNet op de Nederlandse kabel (Cablecrypt) ontsleutelen. Hoe Cablecrypt precies werkte heb ik niet kunnen vinden; daarom zit het hier niet in.": "With a different EPROM and some changes, a Luxcrypt decoder could also decode FilmNet on Dutch cable (Cablecrypt). How Cablecrypt worked exactly could not be found, so it is not included here.", "De optie Negatief stuurt het beeld eerst door de decoder; op de zender zie je dan een helder beeld met alleen de burst schuin erdoor, en een kijker met decoder juist een gescrambeld beeld.": "The Negative option sends the picture through the decoder first; on the transmitter you then see a clear picture with only the burst running through it at a slant, and a viewer with a decoder a scrambled one.", "Geen EPROM nodig": "No EPROM needed", "Verkeerde EPROM": "Wrong EPROM", "Wat een tv zonder decoder laat zien: geen lijnsync, dus het beeld scheurt schuin weg, met de burst als grijze streep erdoorheen.": "What a TV without a decoder shows: no line sync, so the picture tears away at a slant, with the burst as a grey streak through it.", "Wat een kijker met decoder ziet. Met de EPROM van de goede zender een helder beeld; met een andere EPROM klopt de sync wel, maar springt het beeld op de verkeerde momenten naar negatief.": "What a viewer with a decoder sees. With the right station's EPROM a clear picture; with another EPROM the sync is right, but the picture jumps to negative at the wrong moments.", "Zonder decoder: de computer zoekt in elke lijn de burst en kijkt of het beeld negatief staat, zoals de zelfbouwdecoders en pc-programma's van toen.": "Without a decoder: the computer finds the burst in every line and checks whether the picture is negative, like the home-built decoders and PC programs of the day.", "RTL 4 verving alleen de sync. Zonder decoder scheurt het beeld, maar de kleuren kloppen.": "RTL 4 only replaced the sync. Without a decoder the picture tears, but the colours are right.", "RTL 5 keerde daarnaast het hele beeld om en op willekeurige momenten weer terug: negatief, met de complementaire kleuren.": "RTL 5 also inverted the whole picture and switched back at random moments: negative, with complementary colours.", "Veronica gebruikte dezelfde codering als RTL 5: een decoder met de RTL 5-EPROM ontsleutelt het ook.": "Veronica used the same coding as RTL 5: a decoder with the RTL 5 EPROM decodes it too.", "SBS 6 gebruikte dezelfde codering als RTL 5: een decoder met de RTL 5-EPROM ontsleutelt het ook.": "SBS 6 used the same coding as RTL 5: a decoder with the RTL 5 EPROM decodes it too.", "RTL 5 · inversie": "RTL 5 · inversion", "Eurocrypt Cam": "Eurocrypt Cam", "Scramble je eigen foto's en video's zoals FilmNet, TV1000 en Canal+ in D2-MAC: helderheid en kleur van elke lijn apart doorgeknipt en rondgedraaid.": "Scramble your own photos and videos the way FilmNet, TV1000 and Canal+ did in D2-MAC: brightness and colour of every line cut and rotated separately.", "Dubbele snede": "Double cut", "Enkele snede": "Single cut", "Vrije toegang: elke decoder ontsleutelt, ook zonder kaart": "Free access: every decoder decodes, even without a card", "Vrije toegang": "Free access", "De kaart haalt elke 256 beelden (ruim 10 s) een nieuw controlewoord van 60 bits uit de ECM. Daarmee start elk beeld een schuifregister dat per lijn de twee snijpunten geeft.": "Every 256 frames (just over 10 s) the card takes a new 60-bit control word from the ECM. With it, every frame starts a shift register that gives the two cut points for each line.", "Ruw MAC-signaal tonen, zoals op een gewone monitor": "Show the raw MAC signal, as on a plain monitor", "Uitzending bekijken op een PAL-ontvanger, zonder MAC-decoder": "View the broadcast on a PAL receiver, without a MAC decoder", "Dubbele snede: kleur en helderheid apart rondgedraaid": "Double cut: colour and brightness rotated separately", "Enkele snede: de hele lijn in één keer": "Single cut: the whole line at once", "Digitaal geluid versleutelen": "Encrypt the digital sound", "D2-MAC stuurt het geluid digitaal mee. Eurocrypt versleutelt die pakketjes; zonder geldige kaart hoor je ruis. Met \"Live camera\" gaat ook het geluid van de microfoon door de scrambling. Dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.": "D2-MAC carries the sound digitally. Eurocrypt encrypts those packets; without a valid card you hear noise. With \"Live camera\" the microphone sound also goes through the scrambling. That works on the website and when you open the page as a file, but not in the Claude version. Use headphones, or it will feed back.", "De piraat zoekt per lijn de snijpunten terug door lijnen met elkaar te vergelijken, zoals bij VideoCrypt. Het geluid krijgt hij zo niet terug.": "The pirate finds the cut points of each line by comparing lines with each other, as with VideoCrypt. It does not get the sound back that way.", "Slaat op wat je nu ziet, zonder CRT-filter. Het ruwe MAC-signaal komt exact terug; het gewone beeld bijna; het beeld van de PAL-ontvanger niet.": "Saves what you see now, without the CRT filter. The raw MAC signal comes back exactly; the normal picture almost; the PAL receiver picture not.", "D2-MAC zendt kleur en helderheid niet tegelijk uit zoals PAL, maar na elkaar: elke lijn begint met een stukje digitale data, dan de kleur (samengeperst 3:1, om de lijn U of V), dan de helderheid (samengeperst 3:2). Met \"Ruw MAC-signaal\" zie je die lijnen zoals een gewone monitor ze zou tonen.": "D2-MAC does not send colour and brightness at the same time like PAL, but one after the other: every line starts with a little digital data, then the colour (compressed 3:1, U or V on alternate lines), then the brightness (compressed 3:2). With \"Raw MAC signal\" you see those lines as a plain monitor would show them.", "Met een gewone PAL-ontvanger zag je van een D2-MAC-zender als TV1000 of FilmNet weinig. D2-MAC heeft geen syncpulsen onder het zwartniveau: de lijnsync is een digitaal woord van 6 bits aan het begin van elke lijn, en de beeldsync zit als data in lijn 625. De tv kan nergens op inhaken, dus het beeld scheurt schuin weg en rolt. Er is ook geen PAL-kleurburst, dus het beeld is zwart-wit. Links zie je de grijze databurst en de samengeperste kleur, rechts de samengeperste helderheid. De optie \"Uitzending bekijken op een PAL-ontvanger\" laat dat zien. Bevestigd in de hacktv-broncode: de digitale lijn- en beeldsync. Afgeleid: hoe snel het beeld wegloopt en rolt, en de ruis.": "With an ordinary PAL receiver you saw little of a D2-MAC channel such as TV1000 or FilmNet. D2-MAC has no sync pulses below black level: the line sync is a 6-bit digital word at the start of each line, and the frame sync sits as data in line 625. The TV has nothing to lock onto, so the picture tears away at a slant and rolls. There is no PAL colour burst either, so the picture is black and white. On the left you see the grey data burst and the compressed colour, on the right the compressed brightness. The option \"View the broadcast on a PAL receiver\" shows this. Confirmed in the hacktv source: the digital line and frame sync. Derived: how fast the picture drifts and rolls, and the noise.", "Eurocrypt knipt bij dubbele snede het kleurdeel en het helderheidsdeel elk op een eigen punt en draait ze rond, net als VideoCrypt dat met de hele lijn deed. Een D2-MAC-ontvanger zonder kaart toont dan een gescheurd beeld waarin de kleur los van de vormen ligt. Bij enkele snede draait de hele lijn als één stuk, zodat ook kleurdata in het helderheidsdeel belandt.": "With double cut, Eurocrypt cuts the colour part and the brightness part each at its own point and rotates them, just as VideoCrypt did with the whole line. A D2-MAC receiver without a card then shows a torn picture in which the colour lies apart from the shapes. With single cut the whole line rotates as one piece, so colour data also ends up in the brightness part.", "Daar komt ook de bekende paars-groene gloed vandaan. Bij enkele snede schuift een stuk helderheid in het kleurvak. Het nulpunt van de kleur is middengrijs, dus de decoder leest licht als positieve en donker als negatieve kleur. Omdat U (blauw min helderheid) en V (rood min helderheid) om de lijn afwisselen, krijgen ze allebei dezelfde fout. Allebei positief geeft magenta, allebei negatief groen. Zo krijg je een paars-groene schaduw die de vormen van het beeld volgt: paars op lichte plekken, groen op donkere. Bij dubbele snede blijven kleur en helderheid elk in hun eigen vak en zie je bonte strepen. Deze verklaring is een eigen afleiding; een bron heb ik er niet voor gevonden.": "That is also where the familiar purple-green glow comes from. With single cut a piece of brightness slides into the colour slot. The zero point of colour is mid grey, so the decoder reads light as positive and dark as negative colour. Because U (blue minus brightness) and V (red minus brightness) alternate line by line, both get the same error. Both positive gives magenta, both negative gives green. So you get a purple-green shadow that follows the shapes of the picture: purple where it is light, green where it is dark. With double cut colour and brightness each stay in their own slot and you see multicoloured streaks. This explanation is our own derivation; no source was found for it.", "Per lijn komen de twee snijpunten (elk 8 bits, 256 posities) uit een schuifregister dat elk beeld opnieuw begint met het controlewoord en de beeldteller. Het controlewoord is 60 bits en wisselt elke 256 beelden; de kaart ontsleutelt het uit de ECM met DES (Eurocrypt M). Bij vrije toegang is het controlewoord vast en openbaar, zodat elke decoder het beeld helder maakt.": "For each line the two cut points (8 bits each, 256 positions) come from a shift register that restarts every frame from the control word and the frame counter. The control word is 60 bits and changes every 256 frames; the card decrypts it from the ECM with DES (Eurocrypt M). With free access the control word is fixed and public, so every decoder makes the picture clear.", "Bevestigd in de broncode van hacktv: de opbouw van de lijn, beide manieren van knippen, de snijpunten, het schuifregister (dezelfde registers als bij Syster), de wissel elke 256 beelden en het versleutelde digitale geluid. Aannames in deze app: de lijn is geschaald naar 768 punten (480 voor helderheid, 240 voor kleur), de korte overgang tussen kleur en helderheid heeft een vast grijs niveau, en het geluid zonder kaart klinkt als ruis.": "Confirmed in the hacktv source: the line layout, both ways of cutting, the cut points, the shift register (the same registers as Syster), the change every 256 frames and the encrypted digital sound. Assumptions in this app: the line is scaled to 768 points (480 for brightness, 240 for colour), the short gap between colour and brightness has a fixed grey level, and the sound without a card sounds like noise.", "De Piraat-modus doet wat AntiSky deed bij VideoCrypt: elke lijn zo terugdraaien dat hij het best aansluit op de vorige, eerst de helderheid en dan de kleur. Voor de kleur kijkt hij ook of kleurranden samenvallen met randen in de al herstelde helderheid. Bij enkele snede verraadt de grijze overgang tussen kleur en helderheid waar geknipt is. Met 60 bits valt het controlewoord niet uit te proberen; echte piraten richtten zich daarom op de kaart. Het geluid krijg je zo niet terug.": "Pirate mode does what AntiSky did for VideoCrypt: turn each line back so it fits the one before best, first the brightness and then the colour. For the colour it also checks whether colour edges line up with edges in the already restored brightness. With single cut the grey gap between colour and brightness gives away where the cut is. At 60 bits the control word cannot be brute-forced; real pirates went after the card instead. You do not get the sound back this way.", "De optie Negatief stuurt het beeld eerst door de decoder; op de zender zie je dan een helder beeld en een kijker met de juiste kaart juist een gescrambeld beeld.": "The Negative option sends the picture through the decoder first; on the transmitter you then see a clear picture, and a viewer with the right card a scrambled one.", "Zo zag je TV1000 of FilmNet op een gewone PAL-ontvanger: geen syncpulsen om op in te haken, dus het beeld scheurt en rolt, in zwart-wit.": "This is how TV1000 or FilmNet looked on an ordinary PAL receiver: no sync pulses to lock onto, so the picture tears and rolls, in black and white.", "PAL-ontvanger · geen sync": "PAL receiver · no sync", "Wat een D2-MAC-ontvanger zonder kaart laat zien: helderheid en kleur elk op een eigen punt rondgedraaid, bovenin de datastreep.": "What a D2-MAC receiver without a card shows: brightness and colour each rotated at their own point, with the data stripe at the top.", "Zonder kaart: de computer zoekt per lijn de snijpunten terug door hem met de lijn erboven te vergelijken. Het geluid blijft versleuteld.": "Without a card: the computer finds the cut points of each line by comparing it with the line above. The sound stays encrypted.", "De gewone Eurocrypt-instelling: twee snijpunten per lijn, een in de kleur en een in de helderheid.": "The usual Eurocrypt setting: two cut points per line, one in the colour and one in the brightness.", "De hele lijn, kleur en helderheid samen, op één punt rondgedraaid. Helderheid in het kleurvak geeft de bekende paars-groene gloed: paars op lichte plekken, groen op donkere.": "The whole line, colour and brightness together, rotated at one point. Brightness in the colour slot gives the familiar purple-green glow: purple where it is light, green where it is dark.", "Fantasycrypt": "Fantasycrypt", "Een scramblesysteem dat nooit heeft bestaan: elke pixel, of elk blokje, van het beeld wordt per beeld naar een andere plek gestuurd. Onkraakbaar, en precies daarom destijds onbruikbaar.": "A scrambling system that never existed: every pixel, or every little block, of the picture is sent somewhere else each frame. Uncrackable, and for exactly that reason unusable at the time.", "Pixels · digitaal": "Pixels · digital", "De kaart levert per beeld een nieuwe verdeling van alle stukjes over het beeld. Die valt niet uit te proberen.": "Every frame the card supplies a new spread of all pieces across the picture. It cannot be brute-forced.", "Korrel: hoe groot zijn de stukjes die verhuizen": "Grain: how big are the pieces that move", "Losse pixels (442.368 stukjes)": "Single pixels (442,368 pieces)", "Blokjes van 2 × 2": "Blocks of 2 × 2", "Blokjes van 4 × 4": "Blocks of 4 × 4", "Blokjes van 8 × 8": "Blocks of 8 × 8", "Blokjes van 16 × 16 (1.728 stukjes)": "Blocks of 16 × 16 (1,728 pieces)", "Hoe het signaal bij de kijker komt": "How the signal reaches the viewer", "Digitaal: elke pixel komt exact aan": "Digital: every pixel arrives exactly", "Analoge satelliet: 5 MHz, kleur 1,3 MHz, wat ruis": "Analogue satellite: 5 MHz, colour 1.3 MHz, some noise", "Via een videorecorder: 3 MHz, kleur 0,5 MHz, ruis en jitter": "Through a video recorder: 3 MHz, colour 0.5 MHz, noise and jitter", "Via YouTube: videocompressie": "Through YouTube: video compression", "Elk beeld een nieuwe verdeling": "A new spread every frame", "Geluid versleutelen": "Encrypt the sound", "Fantasycrypt versleutelt het geluid digitaal, zoals Eurocrypt: zonder geldige kaart hoor je ruis. Met \"Live camera\" hoor je ook de microfoon; dat werkt op de website en als je de pagina als bestand opent, maar niet in de Claude-versie. Gebruik een koptelefoon, anders gaat het rondzingen.": "Fantasycrypt encrypts the sound digitally, like Eurocrypt: without a valid card you hear noise. With \"Live camera\" you also hear the microphone; that works on the website and when you open the page as a file, but not in the Claude version. Use headphones, or it will feed back.", "De piraat probeert de blokjes als een legpuzzel terug te leggen, door randen te vergelijken. Alleen bij blokjes van 16 × 16 begint hij eraan.": "The pirate tries to put the blocks back like a jigsaw, by comparing edges. It only attempts blocks of 16 × 16.", "De piraat legt de blokjes als een legpuzzel, door randen te vergelijken. Alleen bij blokjes van 16 × 16 begint hij eraan.": "The pirate lays the blocks like a jigsaw, by comparing edges. It only attempts blocks of 16 × 16.", "Fantasycrypt is een bedenksel. Het neemt de twee ideeën van Syster (lijnen verplaatsen) en VideoCrypt (lijnen verschuiven) tot het uiterste door: elke pixel mag overal in het beeld terechtkomen. De verdeling komt per beeld uit de sleutel van de kaart. Een piraat kan die niet uitproberen, en in het beeld zelf zit vrijwel niets meer waar hij houvast aan heeft.": "Fantasycrypt is made up. It takes the two ideas of Syster (moving lines) and VideoCrypt (shifting lines) to the extreme: every pixel can end up anywhere in the picture. The spread comes from the card's key, every frame. A pirate cannot brute-force it, and the picture itself offers almost nothing to hold on to.", "Waarom het destijds niet bestond: een analoog kanaal kan dit niet vervoeren. Naast elkaar liggende pixels hebben niets meer met elkaar te maken, dus het signaal bestaat bijna alleen uit hoge frequenties. De satelliet laat er 5 MHz door, een videorecorder zo'n 3 MHz, en de kleur nog veel minder. Elke pixel wordt uitgesmeerd over zijn buren. De decoder zet de pixels wel terug, maar dat uitsmeren verspreidt hij als ruis over het hele beeld. Kies bij \"Hoe het signaal bij de kijker komt\" maar eens de videorecorder of YouTube.": "Why it did not exist at the time: an analogue channel cannot carry it. Neighbouring pixels no longer have anything to do with each other, so the signal consists almost entirely of high frequencies. The satellite lets 5 MHz through, a video recorder about 3 MHz, and the colour much less still. Every pixel is smeared over its neighbours. The decoder does put the pixels back, but it spreads that smearing as noise over the whole picture. Try choosing the video recorder or YouTube under \"How the signal reaches the viewer\".", "Kleur kon al helemaal niet: PAL heeft een doorlopende kleurdraaggolf nodig, en die bestaat niet meer als de pixels door elkaar liggen. Daarom heeft deze app geen PAL-kleurfout: het denkt in losse kleurcomponenten, zoals D2-MAC. Ook een volledig beeldgeheugen in elke decoder was rond 1990 nog erg duur.": "Colour was out of the question: PAL needs a continuous colour subcarrier, and that no longer exists once the pixels are mixed up. That is why this app has no PAL colour error: it works in separate colour components, like D2-MAC. A full frame memory in every decoder was also still very expensive around 1990.", "Grotere blokjes overleven het kanaal beter, maar zijn weer te kraken: met 16 × 16 is het een legpuzzel van 1.728 stukjes, en de piraat legt die door randen te vergelijken. Daar zit de afweging die echte systemen ook maakten. Lijnen hielden de bandbreedte normaal en waren daardoor uitzendbaar, maar ook kraakbaar. Pas digitale televisie, met DVB-CSA vanaf het midden van de jaren 90, loste het op: daar versleutel je gewoon de bits.": "Bigger blocks survive the channel better, but can be cracked again: at 16 × 16 it is a jigsaw of 1,728 pieces, and the pirate lays it by comparing edges. That is the trade-off real systems made too. Lines kept the bandwidth normal and were therefore broadcastable, but also crackable. Only digital television, with DVB-CSA from the mid-1990s, solved it: there you simply encrypt the bits.", "De optie Negatief stuurt het beeld eerst door de decoder; op de zender zie je dan een helder beeld en een kijker met de juiste kaart juist een gescrambeld beeld. De videorecorder en YouTube worden hier nagebootst met eenvoudige filters en een JPEG-stap, niet met echte apparatuur.": "The Negative option sends the picture through the decoder first; on the transmitter you then see a clear picture, and a viewer with the right card a scrambled one. The video recorder and YouTube are simulated here with simple filters and a JPEG step, not with real equipment.", "Wat er uitgezonden wordt: alle stukjes van het beeld door elkaar, bovenin de datastreep. Kies hieronder hoe het signaal bij de kijker komt.": "What goes out over the air: all pieces of the picture mixed up, with the data stripe at the top. Choose below how the signal reaches the viewer.", "Wat een abonnee ziet. Met de goede kaart gaat elk stukje terug naar zijn plek. Via een analoog kanaal komt er alleen ruis terug.": "What a subscriber sees. With the right card every piece goes back to its place. Through an analogue channel only noise comes back.", "Zonder kaart: de piraat probeert de blokjes als een legpuzzel te leggen. Bij losse pixels is er niets meer om op te passen.": "Without a card: the pirate tries to lay the blocks like a jigsaw. With single pixels there is nothing left to fit.", "Elke pixel apart: 442.368 stukjes per beeld. Digitaal komt alles exact terug; via een analoog kanaal blijft er alleen ruis over.": "Every pixel on its own: 442,368 pieces per frame. Digitally everything comes back exactly; through an analogue channel only noise is left.", "Blokjes van 2 × 2: iets meer samenhang, nog steeds kansloos via een analoog kanaal.": "Blocks of 2 × 2: a little more coherence, still hopeless through an analogue channel.", "Blokjes van 4 × 4: via de satelliet wordt het herkenbaar maar korrelig.": "Blocks of 4 × 4: through the satellite it becomes recognisable but grainy.", "Blokjes van 8 × 8: overleeft het kanaal redelijk; 6.912 stukjes zijn voor deze piraat te veel.": "Blocks of 8 × 8: survives the channel reasonably; 6,912 pieces are too many for this pirate.", "Blokjes van 16 × 16: goed uitzendbaar, maar ook een legpuzzel van 1.728 stukjes voor de piraat.": "Blocks of 16 × 16: broadcasts well, but is also a 1,728-piece jigsaw for the pirate.", "Onbegonnen werk": "Hopeless", "Gelegd": "Laid", "Geluid scramblen": "Scramble the sound", "12,8 kHz, zoals Canal+": "12.8 kHz, as Canal+", "Frame 00000": "Frame 00000", "Taal / Language": "Language / Taal"}, C = {"TESTBEELD · 256 SNIJPUNTEN": "TEST CARD · 256 CUT POINTS", "TESTBEELD · 32768 VOLGORDES": "TEST CARD · 32768 ORDERS", "TESTBEELD · BURST 4 MHZ": "TEST CARD · 4 MHZ BURST", "TESTBEELD · D2-MAC": "TEST CARD · D2-MAC", "TESTBEELD · ALLES DOOR ELKAAR": "TEST CARD · ALL MIXED UP", "KRAKEN...": "CRACKING...", "GEEN EPROM": "NO EPROM"}, F = {"PAL aan": "PAL on", "PAL uit": "PAL off", "kleur intact": "colour intact", "inversie": "inversion", "alleen sync": "sync only", "CW oneven": "CW odd", "CW even": "CW even", "Syster blok": "Syster block", "VC blok": "VC block", "Enkele snede": "Single cut", "Dubbele snede": "Double cut", "digitaal": "digital", "satelliet": "satellite", "video": "video", "YouTube": "YouTube", ", gemiddeld ": ", on average ", "% van de lijnen exact": "% of the lines exact", " (eerste ": " (first ", ". Speel af en zet Opnemen aan om hem te bewaren.": ". Play it and switch on Record to keep it.", " beelden/s": " frames/s"};
+  const R = [["^Kraken (\\d+)%$", "Cracking $1%"], ["^Puzzelen (\\d+)%$", "Solving $1%"], ["^Zenderkaart OK$", "Transmitter card OK"], ["^Zenderkaart leeg$", "Transmitter card empty"], ["^Zender (.+)$", "Station $1"], ["^EPROM (.+) OK$", "EPROM $1 OK"], ["^Geluid omgekeerd ([\\d.,]+) kHz$", "Sound inverted $1 kHz"], ["^Opgeslagen: (.+)$", "Saved: $1"], ["^(\\d+)/(\\d+) lijnen exact$", "$1/$2 lines exact"], ["^(\\d+)/(\\d+) lijnen goed$", "$1/$2 lines right"], ["^(\\d+) exact, (\\d+) zien er goed uit \\(van (\\d+)\\)(.*)$", "$1 exact, $2 look right (of $3)$4"], ["^Y (\\d+) · C (\\d+) van (\\d+)$", "Y $1 · C $2 of $3"], ["^(\\d+)/(\\d+) blokjes goed$", "$1/$2 blocks right"], ["^(\\d+) op hun plek, (\\d+)% buren goed$", "$1 in place, $2% neighbours right"], ["^Met (\\d+) stukjes valt er voor deze piraat niets te leggen: te veel stukjes met te weinig rand\\. Hij geeft het op\\.$", "With $1 pieces there is nothing this pirate can lay: too many pieces with too little edge. It gives up."], ["^Beeld (\\d+)/(\\d+) · nog (\\d+) s$", "Frame $1/$2 · $3 s left"], ["^Afspelen (\\d+)/(\\d+)$", "Playing $1/$2"], ["^(\\d+) beelden gekraakt(.*)$", "$1 frames cracked$2"], ["^Blok (\\d+)×(\\d+) · (.+)$", "Block $1×$2 · $3"], ["^Pixels · (.+)$", "Pixels · $1"], ["^(.+) · (PAL aan|PAL uit|kleur intact|inversie|alleen sync|CW even|CW oneven)$", "$1 · $2"]].map(([p, r]) => [new RegExp(p), r]);
+  const FK = Object.keys(F).sort((a, b) => b.length - a.length);
+  const norm = s => s.replace(/\s+/g, ' ').trim();
+  let lang = 'nl';
+  try { lang = localStorage.getItem('lang') || ((navigator.language || '').toLowerCase().startsWith('nl') ? 'nl' : 'en'); } catch (e) { lang = (navigator.language || '').toLowerCase().startsWith('nl') ? 'nl' : 'en'; }
+  function frag(s){
+    if (!s) return s;
+    const k = norm(s);
+    if (D[k]) return D[k];
+    if (F[k]) return F[k];
+    let out = s;
+    for (const f of FK) if (out.includes(f)) out = out.split(f).join(F[f]);
+    return out;
+  }
+  function tr(s){
+    const k = norm(s);
+    if (!k || !/[a-zà-ü]/i.test(k)) return null;
+    if (D[k] !== undefined) return D[k];
+    for (const [re, rep] of R){ const m = k.match(re); if (m) return rep.replace(/\$(\d)/g, (_, i) => frag(m[+i] || '')); }
+    return null;
+  }
+  function canvasTr(s){ if (lang !== 'en' || typeof s !== 'string') return s; return C[s] || s; }
+  const P = CanvasRenderingContext2D.prototype, fT = P.fillText, sT = P.strokeText, mT = P.measureText;
+  P.fillText = function (t, ...a){ return fT.call(this, canvasTr(t), ...a); };
+  P.strokeText = function (t, ...a){ return sT.call(this, canvasTr(t), ...a); };
+  P.measureText = function (t){ return mT.call(this, canvasTr(t)); };
+
+  const rec = new WeakMap();            // text node -> {nl, en}
+  const ATTR = ['title', 'aria-label', 'placeholder'];
+  function doText(n){
+    const p = n.parentNode;
+    if (!p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || (p.closest && p.closest('[data-noi18n]'))) return;
+    const t = n.data, r = rec.get(n);
+    if (lang === 'en'){
+      if (r && t === r.en) return;
+      const en = tr(t);
+      if (en === null){ rec.delete(n); return; }
+      const lead = t.match(/^\s*/)[0], trail = t.match(/\s*$/)[0], v = lead + en + trail;
+      rec.set(n, { nl: t, en: v });
+      if (v !== t) n.data = v;
+    } else if (r && t === r.en){ n.data = r.nl; rec.delete(n); }
+  }
+  function doAttrs(el){
+    for (const a of ATTR){
+      if (!el.hasAttribute(a)) continue;
+      const v = el.getAttribute(a), key = 'i18n' + a.replace(/-/g, ''), o = el.dataset[key + 'Nl'], e = el.dataset[key + 'En'];
+      if (lang === 'en'){
+        if (e !== undefined && v === e) continue;
+        const en = tr(v); if (en === null) continue;
+        el.dataset[key + 'Nl'] = v; el.dataset[key + 'En'] = en; el.setAttribute(a, en);
+      } else if (e !== undefined && v === e && o !== undefined){ el.setAttribute(a, o); }
+    }
+  }
+  function walk(root){
+    if (root.nodeType === 3){ doText(root); return; }
+    if (root.nodeType !== 1 && root.nodeType !== 9) return;
+    if (root.nodeType === 1) doAttrs(root);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    let n; while ((n = w.nextNode())){ if (n.nodeType === 3) doText(n); else doAttrs(n); }
+  }
+  const mo = new MutationObserver(ms => {
+    for (const m of ms){
+      if (m.type === 'characterData') doText(m.target);
+      else if (m.type === 'attributes') doAttrs(m.target);
+      else m.addedNodes.forEach(walk);
+    }
+  });
+  function paintButtons(){
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === lang)));
+  }
+  function setLang(l){
+    lang = l === 'en' ? 'en' : 'nl';
+    try { localStorage.setItem('lang', lang); } catch (e) {}
+    document.documentElement.lang = lang;
+    walk(document.body);
+    paintButtons();
+    try { if (typeof window.drawTestCard === 'function') window.drawTestCard(); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('langchange', { detail: lang })); } catch (e) {}
+  }
+  window.I18N = { tr, setLang, get lang(){ return lang; } };
+  function init(){
+    document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.l)));
+    document.documentElement.lang = lang;
+    walk(document.body);
+    paintButtons();
+    mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTR });
+  }
+  if (document.body) init(); else document.addEventListener('DOMContentLoaded', init);
+})();
+
+</script><!--/i18n-->
+<script>
+/* CORE START */
+const W = 768, H = 592, BAR = 16;              // 16 data lines on top, then 576 picture lines
+const S = 32, EDGE = 6;                        // line blanking where the sync sat (now the burst); black edges of the active line
+const SYNC = 0xA5, SYNC2 = 0x5A, BLACK = 0xFF000000;
+const STATIONS = [
+  { name: 'RTL 4', short: 'RTL 4', inverts: false, table: 0 },
+  { name: 'RTL 5', short: 'RTL 5', inverts: true, table: 1 },
+  { name: 'Veronica', short: 'Veronica', inverts: true, table: 1 },   // same coding as RTL 5
+  { name: 'SBS 6', short: 'SBS 6', inverts: true, table: 1 }
+];
+function tableOf(st){ return STATIONS[st].table; }
+// the 4 MHz burst in place of the sync: at 13.5 MHz sampling one cycle is 3.375 pixels
+const BURST = Array.from({ length: S }, (_, k) => Math.round(128 + 80 * Math.sin(2 * Math.PI * k / 3.375)));
+const BURST32 = Uint32Array.from(BURST, v => (0xFF000000 | (v << 16) | (v << 8) | v) >>> 0);
+
+function mkImg(){ return typeof ImageData !== 'undefined' ? new ImageData(W, H) : { width: W, height: H, data: new Uint8ClampedArray(W * H * 4) }; }
+function keyHash(s){
+  let h = 0x811c9dc5;
+  const b = new TextEncoder().encode(String(s).trim().toUpperCase());
+  for (const x of b){ h ^= x; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+}
+function fmix(h){ h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return h >>> 0; }
+
+// the EPROM: one bit per frame. The whole picture is turned negative and back again at irregular moments,
+// for stretches of a few frames up to about two seconds (the lengths are an assumption)
+const epromCache = new Map();
+function eprom(t){
+  if (epromCache.has(t)) return epromCache.get(t);
+  const bits = new Uint8Array(65536); let h = keyHash('LUXCRYPT TABEL ' + t), v = 0;
+  for (let i = 0; i < 65536;){ h = fmix(h + 0x9E3779B9); const run = 3 + (h % 48); v ^= 1; for (let k = 0; k < run && i < 65536; k++) bits[i++] = v; }
+  epromCache.set(t, bits);
+  return bits;
+}
+function frameInverted(st, frame){ return STATIONS[st].inverts && eprom(tableOf(st))[frame & 0xffff] === 1; }
+function inverted(st, frame, y){ return frameInverted(st, frame); }   // every line of a frame goes the same way
+// a TV without sync free-runs: every line starts a little later than it should, so the picture shears and wraps
+function offOf(frame, y){ return Math.floor(((frame & 0xffff) * 97 + (y - BAR) * 5.37)) % W; }
+
+// keep the parts of the line the system does not carry: the blanking (later the burst) and the black edges
+function maskLine(img){
+  const d32 = new Uint32Array(img.data.buffer);
+  for (let y = BAR; y < H; y++){ const o = y * W; d32.fill(BLACK, o, o + S + EDGE); d32.fill(BLACK, o + W - EDGE, o + W); }
+}
+function invertRange(d, p0, p1){ for (let p = p0 * 4, e = p1 * 4; p < e; p += 4){ d[p] = 255 - d[p]; d[p + 1] = 255 - d[p + 1]; d[p + 2] = 255 - d[p + 2]; } }
+
+function writeBar(d, info){
+  const a = ((SYNC << 24) | ((info.frame & 0xffff) << 8) | ((info.station & 3) << 6) | (info.neg ? 2 : 0)) >>> 0;
+  const b = ((SYNC2 << 24) | ((info.carrier & 3) << 1) | (info.sound ? 1 : 0)) >>> 0;
+  const bw = W / 32;
+  for (let r = 0; r < BAR; r++) for (let x = 0; x < W; x++){
+    const word = r >= 2 && r <= 6 ? a : r >= 9 && r <= 13 ? b : -1;
+    const v = word === -1 ? 0 : (((word >>> (31 - Math.floor(x / bw))) & 1) ? 235 : 16);
+    const p = (r * W + x) * 4; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255;
+  }
+}
+function readWord(d, r){
+  const bw = W / 32; let bits = 0;
+  for (let b = 0; b < 32; b++){
+    let s = 0, n = 0;
+    for (let x = b * bw + 6; x < b * bw + bw - 6; x++){ const p = (r * W + x) * 4; s += 0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2]; n++; }
+    const m = s / n;
+    if (m > 75 && m < 175) return null;
+    bits = (bits << 1) | (m >= 125 ? 1 : 0);
+  }
+  return bits >>> 0;
+}
+function readBar(d){
+  const a = readWord(d, 4);
+  if (a === null || (a >>> 24) !== SYNC) return null;
+  const b = readWord(d, 11), okB = b !== null && (b >>> 24) === SYNC2;
+  return { frame: (a >>> 8) & 0xffff, station: (a >>> 6) & 3, sound: okB && !!(b & 1), carrier: okB ? (b >>> 1) & 3 : 0 };
+}
+
+// clear -> what goes out (and what a TV without decoder shows): invert the active line if the EPROM says so,
+// put the burst where the sync was, and let the line slip by the free-running offset
+function scramble(src, dst, st, frame, sound = false, carrier = 0){
+  const s32 = new Uint32Array(src.data.buffer), d32 = new Uint32Array(dst.data.buffer);
+  const line = new Uint8ClampedArray(W * 4), l32 = new Uint32Array(line.buffer);
+  const plan = { off: new Int16Array(H), inv: new Uint8Array(H) };
+  for (let y = BAR; y < H; y++){
+    l32.set(s32.subarray(y * W, y * W + W));
+    const inv = inverted(st, frame, y) ? 1 : 0;
+    if (inv) invertRange(line, S, W);
+    l32.set(BURST32, 0);
+    const off = offOf(frame, y), o = y * W;
+    d32.set(l32.subarray(0, W - off), o + off); d32.set(l32.subarray(W - off), o);
+    plan.off[y] = off; plan.inv[y] = inv;
+  }
+  writeBar(dst.data, { frame, station: st, sound, carrier });
+  return plan;
+}
+// find the burst in a received line: the place where the next 32 pixels look most like it
+function findBurst(d32, y){
+  const o = y * W; let best = Infinity, bp = 0;
+  for (let p = 0; p < W; p++){
+    let s = 0;
+    for (let k = 0; k < S && s < best; k++){ const v = (d32[o + ((p + k) % W)] >>> 8) & 255; s += Math.abs(v - BURST[k]); }
+    if (s < best){ best = s; bp = p; }
+  }
+  return bp;
+}
+// received -> clear with a plan: undo the slip, blank the burst, invert the marked lines back
+function unscramble(src, dst, plan){
+  const s32 = new Uint32Array(src.data.buffer), d32 = new Uint32Array(dst.data.buffer);
+  for (let y = BAR; y < H; y++){
+    const off = plan.off[y], o = y * W;
+    d32.set(s32.subarray(o + off, o + W), o); d32.set(s32.subarray(o, o + off), o + W - off);
+    d32.fill(BLACK, o, o + S);
+    if (plan.inv[y]) invertRange(dst.data, o + S, o + W);
+  }
+  d32.fill(BLACK, 0, BAR * W);
+}
+// what a real decoder does: sync from the burst, inversions from its own EPROM (st = -1: no EPROM)
+function decoderPlan(img, st, frame){
+  const d32 = new Uint32Array(img.data.buffer), plan = { off: new Int16Array(H), inv: new Uint8Array(H) };
+  for (let y = BAR; y < H; y++){ plan.off[y] = findBurst(d32, y); plan.inv[y] = st >= 0 && inverted(st, frame, y) ? 1 : 0; }
+  return plan;
+}
+// what the transmitter knows (for the negative mode)
+function truePlan(st, frame){
+  const plan = { off: new Int16Array(H), inv: new Uint8Array(H) };
+  for (let y = BAR; y < H; y++){ plan.off[y] = offOf(frame, y); plan.inv[y] = inverted(st, frame, y) ? 1 : 0; }
+  return plan;
+}
+
+// ---- the pirate: no EPROM needed ----
+async function crack(img, method, prog){
+  const d32 = new Uint32Array(img.data.buffer), plan = { off: new Int16Array(H), inv: new Uint8Array(H) };
+  const tmp = mkImg();
+  for (let y = BAR; y < H; y++) plan.off[y] = findBurst(d32, y);
+  if (prog) await prog(0.5);
+  unscramble(img, tmp, plan);                      // straight lines, inversions still in
+  const t = tmp.data, Y = (y, x) => { const p = (y * W + x) * 4; return 0.299 * t[p] + 0.587 * t[p + 1] + 0.114 * t[p + 2]; };
+  // the whole frame is either normal or negative: decide once for the frame, then apply it to every line
+  let neg;
+  if (method === 'edge'){
+    // the black edges of every line are the black level; in a negative frame they come out white
+    let s = 0, n = 0;
+    for (let y = BAR; y < H; y++) for (let k = 0; k < EDGE; k++){ s += Y(y, S + k) + Y(y, W - 1 - k); n += 2; }
+    neg = s / n > 128;
+  } else {
+    // only the picture: most scenes are darker than half way, so a frame that is mostly bright is probably negative
+    let s = 0, n = 0;
+    for (let y = BAR; y < H; y += 2) for (let x = S + EDGE; x < W - EDGE; x += 4){ s += Y(y, x); n++; }
+    neg = s / n > 128;
+  }
+  for (let y = BAR; y < H; y++) plan.inv[y] = neg ? 1 : 0;
+  if (prog) await prog(1);
+  return plan;
+}
+function planScore(a, b){
+  let ok = 0, tot = 0;
+  for (let y = BAR; y < H; y++){ tot++; if (a.off[y] === b.off[y] && a.inv[y] === b.inv[y]) ok++; }
+  return { ok, tot };
+}
+/* CORE END */
+
+// ---------------- page ----------------
+const out = document.getElementById('out');
+const octx = out.getContext('2d');
+const srcC = document.createElement('canvas'); srcC.width = W; srcC.height = H;
+const sctx = srcC.getContext('2d', { willReadFrequently: true });
+const $ = id => document.getElementById(id);
+
+const state = {
+  view: 'tx', paused: false, frame: 0,
+  source: 'test', image: null, video: null, stream: null,
+  channel: new ImageData(W, H), chInfo: null, chTrue: null, sourceScrambled: false,
+  rxBuf: new ImageData(W, H), crack: null, cracking: false, msg: 'Testbeeld'
+};
+
+// ---- test card ----
+const PX = S, PWD = W - S, CX = PX + PWD / 2, CY = BAR + 288;
+const card = document.createElement('canvas'); card.width = W; card.height = H;
+function drawTestCard(){
+  const c = card.getContext('2d');
+  const bg = c.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#8f949b'); bg.addColorStop(1, '#5a5f66'); c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2;
+  const gaps = [34, 47, 39, 52, 36, 44, 49, 33, 41, 55, 38, 46, 35, 50, 43, 37];   // irregular grid
+  for (let x = PX + 8, i = 0; x <= W; x += gaps[i++ % gaps.length]){ c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+  for (let y = BAR + 10, i = 5; y <= H; y += gaps[i++ % gaps.length]){ c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+  c.save(); c.beginPath(); c.arc(CX, CY, 236, 0, Math.PI * 2); c.clip();
+  c.fillStyle = '#22252b'; c.fillRect(0, 0, W, H);
+  const bars = ['#bfbfbf', '#bfbf00', '#00bfbf', '#00bf00', '#bf00bf', '#bf0000', '#0000bf'];
+  bars.forEach((col, i) => { c.fillStyle = col; c.fillRect(CX - 200 + i * 400 / 7, CY - 190, 400 / 7 + 0.5, 120); });
+  for (let i = 0; i < 8; i++){ const v = Math.round(i * 255 / 7); c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(CX - 200 + i * 50, CY - 70, 50, 50); }
+  [2, 3, 4, 6, 8, 12].forEach((p, i) => { for (let x = 0; x < 66; x++){ c.fillStyle = (Math.floor(x / (p / 2)) % 2) ? '#f2f2f2' : '#101010'; c.fillRect(CX - 198 + i * 66 + x, CY - 20, 1, 64); } });
+  c.fillStyle = '#eef2f6'; c.fillRect(CX - 200, CY + 44, 400, 76);
+  c.restore();
+  c.strokeStyle = '#f2f2f2'; c.lineWidth = 4; c.beginPath(); c.arc(CX, CY, 236, 0, Math.PI * 2); c.stroke();
+  c.lineWidth = 3; c.beginPath(); c.moveTo(CX - 270, CY); c.lineTo(CX + 270, CY); c.moveTo(CX, CY - 270); c.lineTo(CX, CY + 236); c.stroke();
+  c.fillStyle = '#16191e'; c.font = '600 32px "IBM Plex Mono", ui-monospace, monospace'; c.textAlign = 'center';
+  c.fillText('LUXCRYPT CAM', CX, CY + 82);
+  c.font = '500 16px "IBM Plex Mono", ui-monospace, monospace'; c.fillText('TESTBEELD · BURST 4 MHZ', CX, CY + 108);
+  [[PX + 44, BAR + 40], [W - 44, BAR + 40], [PX + 44, H - 44], [W - 44, H - 44]].forEach(([x, y]) => { c.fillStyle = '#d9d9d9'; c.beginPath(); c.arc(x, y, 18, 0, Math.PI * 2); c.fill(); c.fillStyle = '#2a2d33'; c.beginPath(); c.arc(x, y, 8, 0, Math.PI * 2); c.fill(); });
+}
+drawTestCard();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawTestCard).catch(() => {});
+function drawTest(){
+  sctx.drawImage(card, 0, 0);
+  const t = new Date(), hh = String(t.getHours()).padStart(2, '0'), mm = String(t.getMinutes()).padStart(2, '0'), ss = String(t.getSeconds()).padStart(2, '0');
+  sctx.fillStyle = '#0b0d10'; sctx.fillRect(CX - 89, BAR + 491, 178, 44);   // same place and size as in VideoCrypt Cam, inside the safe area
+  sctx.fillStyle = '#ffd35a'; sctx.font = '500 31px "IBM Plex Mono", ui-monospace, monospace'; sctx.textAlign = 'center';
+  sctx.fillText(`${hh}:${mm}:${ss}`, CX, BAR + 525);
+  const a = (Date.now() / 1000) * Math.PI;      // a moving hand so frames differ
+  sctx.strokeStyle = '#ff6a3d'; sctx.lineWidth = 6; sctx.beginPath(); sctx.moveTo(CX, CY); sctx.lineTo(CX + Math.cos(a) * 170, CY + Math.sin(a) * 170); sctx.stroke();
+}
+function drawCover(el, ew, eh){
+  if (!ew || !eh) return false;
+  const s = Math.max(W / ew, H / eh), dw = ew * s, dh = eh * s;
+  sctx.fillStyle = '#000'; sctx.fillRect(0, 0, W, H);
+  sctx.imageSmoothingEnabled = !(ew === W && eh === H);
+  sctx.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  return true;
+}
+function drawSource(){
+  if (state.source === 'test'){ drawTest(); return true; }
+  if (state.source === 'image' && state.image) return drawCover(state.image, state.image.naturalWidth, state.image.naturalHeight);
+  if ((state.source === 'video' || state.source === 'live') && state.video && state.video.readyState >= 2)
+    return drawCover(state.video, state.video.videoWidth, state.video.videoHeight);
+  return false;
+}
+
+// ---- pipeline ----
+function txStation(){ return +$('txStation').value; }
+function rxStation(){ return +$('rxStation').value; }
+function step(){
+  if (!state.paused && drawSource()){
+    const src = sctx.getImageData(0, 0, W, H);
+    const info = readBar(src.data);
+    if (info){
+      state.channel = src; state.chInfo = info; state.sourceScrambled = true; state.chTrue = null;
+    } else {
+      if ($('optFrame').checked) state.frame = (state.frame + 1) & 0xffff;
+      const st = txStation(), sound = $('optSound').checked, carrier = +$('optCarrier').value;
+      let feed = src;
+      if ($('optNeg').checked){
+        // negative mode: run the decoder on the clear picture first, so the encoder puts it back together
+        feed = new ImageData(W, H);
+        const tp = truePlan(st, state.frame), s32 = new Uint32Array(src.data.buffer), f32 = new Uint32Array(feed.data.buffer);
+        for (let y = BAR; y < H; y++){ const o = y * W, off = tp.off[y]; f32.set(s32.subarray(o + off, o + W), o); f32.set(s32.subarray(o, o + off), o + W - off); if (tp.inv[y]) invertRange(feed.data, o + S, o + W); }
+      } else maskLine(src);
+      const ch = new ImageData(W, H);
+      state.chTrue = scramble(feed, ch, st, state.frame, sound, carrier);
+      state.channel = ch; state.chInfo = { frame: state.frame, station: st, sound, carrier };
+      state.sourceScrambled = false;
+    }
+  }
+  render();
+}
+function overlayBox(text){
+  octx.save();
+  octx.font = '500 24px "IBM Plex Mono", ui-monospace, monospace';
+  const tw = octx.measureText(text).width, bx = (W - tw) / 2 - 16, by = H * 0.72;
+  octx.fillStyle = 'rgba(118,124,132,.92)'; octx.fillRect(bx, by, tw + 32, 42);
+  octx.fillStyle = '#fff'; octx.textBaseline = 'middle'; octx.textAlign = 'left'; octx.fillText(text, bx + 16, by + 22);
+  octx.restore();
+}
+function render(){
+  const info = state.chInfo;
+  let cardTxt = 'EPROM --';
+  if (state.view === 'tx'){
+    octx.putImageData(state.channel, 0, 0);
+    cardTxt = state.sourceScrambled ? 'Bron al gescrambeld' : 'Zender ' + STATIONS[txStation()].short;
+  } else if (state.view === 'rx'){
+    if (!info){ octx.putImageData(state.channel, 0, 0); cardTxt = 'Geen signaal'; }
+    else if (rxStation() < 0){ octx.putImageData(state.channel, 0, 0); overlayBox('GEEN EPROM'); cardTxt = 'Geen EPROM'; }
+    else {
+      unscramble(state.channel, state.rxBuf, decoderPlan(state.channel, rxStation(), info.frame));
+      octx.putImageData(state.rxBuf, 0, 0);
+      cardTxt = tableOf(rxStation()) === tableOf(info.station) ? 'EPROM ' + STATIONS[rxStation()].short + ' OK' : 'Verkeerde EPROM';
+    }
+  } else {
+    if (state.crack){ octx.putImageData(state.crack.img, 0, 0); cardTxt = state.crack.score; }
+    else { octx.putImageData(state.channel, 0, 0); overlayBox(state.cracking ? 'KRAKEN...' : 'NO DECODER - PIRATE MODE'); cardTxt = 'Geen EPROM nodig'; }
+  }
+  $('vfdFrame').textContent = 'Frame ' + String(info ? info.frame : 0).padStart(5, '0');
+  $('vfdCard').textContent = cardTxt;
+  const st = info ? info.station : txStation();
+  $('vfdPal').textContent = STATIONS[st].short + (STATIONS[st].inverts ? ' · inversie' : ' · alleen sync');
+  $('vfdMsg').textContent = state.msg;
+  routeSound();
+}
+let last = 0;
+function tick(ts){ requestAnimationFrame(tick); if (ts - last < 40) return; last = ts; step(); }
+requestAnimationFrame(tick);
+
+// ---- sound ----
+// Spectral inversion: multiply by a carrier and keep only the lower sideband, so a tone at f comes out at fc - f.
+// Doing it twice gives the original back. Luxcrypt itself left the sound alone; Syster and Discret 11 used 12.8 kHz.
+const CARRIERS = [12800, 9000, 6000, 3000];
+const snd = { ctx: null, on: false, direct: null, chains: [], master: null, rec: null, media: null, tune: null, next: 0, step: 0 };
+// a steep linear-phase low-pass at the carrier (Blackman-windowed sinc, about 300 Hz wide), so the two sidebands stay apart
+function steepLowpass(ctx, from, fc){
+  const fs = ctx.sampleRate, N = 2 * Math.floor(5.5 * fs / 300 / 2) + 1, mid = (N - 1) / 2;
+  const buf = ctx.createBuffer(1, N, fs), h = buf.getChannelData(0); let sum = 0;
+  for (let i = 0; i < N; i++){
+    const n = i - mid, x = 2 * fc / fs * n, sinc = n === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x);
+    const w = 0.42 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1)) + 0.08 * Math.cos(4 * Math.PI * i / (N - 1));
+    h[i] = sinc * w; sum += h[i];
+  }
+  for (let i = 0; i < N; i++) h[i] /= sum;
+  const conv = ctx.createConvolver(); conv.normalize = false; conv.buffer = buf;
+  from.connect(conv); return conv;
+}
+// from -> 150 Hz high-pass -> low-pass at fc -> ring modulator -> low-pass at fc -> x2 (the mixer halves the amplitude)
+function buildInverter(ctx, from, fc){
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = 0.707; from.connect(hp);
+  const pre = steepLowpass(ctx, hp, fc);
+  const ring = ctx.createGain(); ring.gain.value = 0;
+  const carrier = ctx.createOscillator(); carrier.frequency.value = fc; carrier.connect(ring.gain); carrier.start();
+  pre.connect(ring);
+  const post = steepLowpass(ctx, ring, fc);
+  const out = ctx.createGain(); out.gain.value = 2; post.connect(out);
+  return out;
+}
+function chain(idx){
+  if (snd.chains[idx]) return snd.chains[idx];
+  const inv = buildInverter(snd.ctx, snd.input, CARRIERS[idx]);
+  const out = snd.ctx.createGain(); out.gain.value = 0; inv.connect(out); out.connect(snd.invBus);
+  return (snd.chains[idx] = out);
+}
+// "Geluidsversterking": after turning the spectrum back, the bass comes from the top of the scrambled sound, which tape
+// and compression mostly lost. Lift the lows and mids, tame the hiss that used to be the low end, and bring the level up.
+function buildRestore(ctx){
+  const input = ctx.createGain();
+  const lows = ctx.createBiquadFilter(); lows.type = 'lowshelf'; lows.frequency.value = 400;
+  const mids = ctx.createBiquadFilter(); mids.type = 'peaking'; mids.frequency.value = 1400; mids.Q.value = 0.8;
+  const hiss = ctx.createBiquadFilter(); hiss.type = 'highshelf'; hiss.frequency.value = 7000; hiss.gain.value = -4;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -30; comp.knee.value = 18; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.25;
+  const output = ctx.createGain();
+  input.connect(lows); lows.connect(mids); mids.connect(hiss); hiss.connect(comp); comp.connect(output);
+  const set = db => { lows.gain.value = db; mids.gain.value = db / 2; output.gain.value = Math.pow(10, Math.min(db, 12) / 40); };
+  set(12);
+  return { input, output, set };
+}
+function initSound(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return false;
+  const ctx = snd.ctx = new AC();
+  snd.input = ctx.createGain();
+  snd.master = ctx.createGain(); snd.master.gain.value = 0.8; snd.master.connect(ctx.destination);
+  snd.invBus = ctx.createGain(); snd.invDry = ctx.createGain(); snd.invWet = ctx.createGain(); snd.invWet.gain.value = 0;
+  snd.restore = buildRestore(ctx); snd.restore.set(+$('optRestoreAmt').value);
+  snd.invBus.connect(snd.invDry); snd.invDry.connect(snd.master);
+  snd.invBus.connect(snd.restore.input); snd.restore.output.connect(snd.invWet); snd.invWet.connect(snd.master);
+  snd.direct = ctx.createGain(); snd.direct.gain.value = 1; snd.input.connect(snd.direct); snd.direct.connect(snd.master);
+  snd.rec = ctx.createMediaStreamDestination(); snd.master.connect(snd.rec);
+  snd.tune = ctx.createGain(); snd.tune.gain.value = 0; snd.tune.connect(snd.input);
+  setInterval(scheduleTune, 100);
+  return true;
+}
+// test card sound: an own ident, a little waltz of rising and falling notes with harmonics, so the inversion is easy to hear
+const TUNE = [392, 523.25, 659.25, 783.99, 659.25, 523.25, 587.33, 739.99, 880, 739.99, 587.33, 493.88, 523.25, 659.25, 392, 0];
+function scheduleTune(){
+  const ctx = snd.ctx; if (!ctx) return;
+  const playing = snd.on && state.source === 'test' && !state.paused;
+  snd.tune.gain.setTargetAtTime(playing ? 1 : 0, ctx.currentTime, 0.03);
+  if (!playing){ snd.next = 0; return; }
+  if (snd.next < ctx.currentTime) snd.next = ctx.currentTime + 0.05;
+  while (snd.next < ctx.currentTime + 0.3){
+    const i = snd.step++ % TUNE.length, f = TUNE[i], t = snd.next, dur = i % 3 === 0 ? 0.34 : 0.22;
+    if (f){
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      const soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 4500;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(soft); soft.connect(g); g.connect(snd.tune); o.start(t); o.stop(t + dur + 0.02);
+    }
+    snd.next += i % 3 === 0 ? 0.36 : 0.24;
+  }
+}
+function attachVideoSound(){
+  if (!snd.ctx || !state.fileVideo || snd.media) return;
+  try { snd.media = snd.ctx.createMediaElementSource(state.fileVideo); snd.media.connect(snd.input); state.fileVideo.muted = false; } catch (e) { snd.media = null; }
+}
+// live sound from the microphone, through the same scrambling as the test card and video files
+function attachLiveSound(){
+  if (!snd.ctx || !state.stream || snd.live || !state.stream.getAudioTracks().length) return;
+  try { snd.live = snd.ctx.createMediaStreamSource(state.stream); snd.live.connect(snd.input); } catch (e) { snd.live = null; }
+}
+let lastRoute = '';
+function routeSound(){
+  if (!snd.ctx) return;
+  const info = state.chInfo;
+  // a recording without our data lines can still carry scrambled sound: then the channel is scrambled as it comes in,
+  // the transmitter tab plays it as is, and the receiver or the pirate turn it back
+  const srcSnd = !state.sourceScrambled && $('optSrcSnd').checked;
+  const srcInverted = state.sourceScrambled ? !!(info && info.sound) : srcSnd;
+  const chanInverted = state.sourceScrambled ? !!(info && info.sound) : (srcSnd || $('optSound').checked);
+  let decoded = false;
+  if (state.view === 'rx') decoded = !!(info && rxStation() >= 0);              // spectral inversion needs no key
+  if (state.view === 'crack') decoded = true;                    // inversion needs no key: a pirate just inverts again
+  const heardInverted = chanInverted && !decoded;
+  const flip = srcInverted !== heardInverted;
+  // scrambled sound goes out 12 dB down; a decoder brings it back up
+  let level = 1;
+  if (heardInverted && !srcInverted) level = 0.25;
+  if (srcInverted && !heardInverted) level = srcSnd ? 1 : 4;     // our own recordings went out 12 dB down; a real one we take as it is
+  const restore = $('optRestore').checked && flip;
+  if (restore && level < 1) level = 1;               // restoring: never 12 dB down
+  const cidx = state.sourceScrambled ? (info && info.carrier) || 0 : +$('optCarrier').value;
+  const key = `${snd.on}|${flip}|${level}|${cidx}|${restore}`;
+  $('vfdSound').textContent = !snd.on ? 'Geluid uit' : heardInverted ? 'Geluid omgekeerd ' + (CARRIERS[cidx] / 1000).toFixed(1).replace('.', ',') + ' kHz' : 'Geluid helder';
+  if (restore && snd.on) $('vfdSound').textContent = 'Geluid versterkt';
+  if (key === lastRoute) return; lastRoute = key;
+  const t = snd.ctx.currentTime;
+  snd.invDry.gain.setTargetAtTime(restore ? 0 : 1, t, 0.03); snd.invWet.gain.setTargetAtTime(restore ? 1 : 0, t, 0.03);
+  snd.direct.gain.setTargetAtTime(flip ? 0 : level, t, 0.02);
+  if (flip) chain(cidx);
+  snd.chains.forEach((g, i) => { if (g) g.gain.setTargetAtTime(flip && i === cidx ? level : 0, t, 0.02); });
+  snd.master.gain.setTargetAtTime(snd.on ? 0.8 : 0, t, 0.02);
+}
+$('btnSound').onclick = () => {
+  if (!snd.ctx && !initSound()){ $('btnSound').disabled = true; $('btnSound').textContent = 'Geen geluid hier'; return; }
+  snd.ctx.resume && snd.ctx.resume();
+  snd.on = !snd.on;
+  if (snd.on){ attachVideoSound(); attachLiveSound(); }
+  $('btnSound').setAttribute('aria-pressed', String(snd.on)); $('btnSound').textContent = snd.on ? 'Geluid uit' : 'Geluid aan';
+  lastRoute = ''; routeSound();
+};
+
+
+// ---- views ----
+const hints = {
+  tx: 'Wat een tv zonder decoder laat zien: geen lijnsync, dus het beeld scheurt schuin weg, met de burst als grijze streep erdoorheen.',
+  rx: 'Wat een kijker met decoder ziet. Met de EPROM van de goede zender een helder beeld; met een andere EPROM klopt de sync wel, maar springt het beeld op de verkeerde momenten naar negatief.',
+  crack: 'Zonder decoder: de computer zoekt in elke lijn de burst en kijkt of het beeld negatief staat, zoals de zelfbouwdecoders en pc-programma\'s van toen.'
+};
+function setView(v){
+  state.view = v;
+  for (const t of ['tx', 'rx', 'crack']) $('tab-' + t).setAttribute('aria-selected', String(t === v));
+  $('hint').textContent = hints[v];
+  $('ledtxt').textContent = { tx: 'Uitzending', rx: 'Ontvanger', crack: 'Piraat' }[v];
+  $('crackBox').hidden = v !== 'crack';
+  render();
+}
+$('tab-tx').onclick = () => setView('tx');
+$('tab-rx').onclick = () => setView('rx');
+$('tab-crack').onclick = () => setView('crack');
+setView('tx');
+
+// ---- sources ----
+function stopMedia(){
+  if (snd.live){ try { snd.live.disconnect(); } catch (e) {} snd.live = null; }
+  if (state.stream){ state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+  if (state.video){ state.video.pause(); if (state.video.src) URL.revokeObjectURL(state.video.src); state.video.removeAttribute('src'); state.video.srcObject = null; }
+}
+function useTest(){ stopMedia(); state.source = 'test'; state.msg = 'Testbeeld'; state.crack = null; setPaused(false); }
+async function useFile(f){
+  if (!f) return;
+  stopMedia(); state.crack = null;
+  const url = URL.createObjectURL(f);
+  if (f.type.startsWith('video/')){
+    const v = state.video = state.fileVideo || (state.fileVideo = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true }));
+    v.setAttribute('playsinline', ''); v.src = url; state.source = 'video'; state.msg = 'Video';
+    if (snd.on) attachVideoSound();
+    try { await v.play(); } catch (e) { state.msg = 'Tik op Pauze om af te spelen'; }
+  } else {
+    const img = new Image();
+    img.onload = () => { state.image = img; state.source = 'image'; state.msg = 'Foto'; setPaused(false); };
+    img.onerror = () => { state.msg = 'Dit bestand kan ik niet openen'; };
+    img.src = url;
+  }
+  setPaused(false);
+}
+$('btnCapture').onclick = () => $('cap').click();
+$('btnPick').onclick = () => $('pick').click();
+$('cap').onchange = e => { useFile(e.target.files[0]); e.target.value = ''; };
+$('pick').onchange = e => { useFile(e.target.files[0]); e.target.value = ''; };
+$('btnTest').onclick = useTest;
+$('btnLive').onclick = async () => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('none');
+    // ask for the microphone too; if that is refused, carry on with picture only
+    let s;
+    try { s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } }); }
+    catch (e) { s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
+    stopMedia(); state.stream = s; state.crack = null;
+    const v = state.video = state.liveVideo || (state.liveVideo = Object.assign(document.createElement('video'), { muted: true, playsInline: true }));
+    v.muted = true; v.setAttribute('playsinline', ''); v.srcObject = s; await v.play();
+    const withMic = s.getAudioTracks().length > 0;
+    if (snd.on) attachLiveSound();
+    state.source = 'live'; state.msg = withMic ? 'Live met geluid' : 'Live'; setPaused(false);
+  } catch (e) {
+    $('btnLive').hidden = true;
+    $('srcNote').textContent = 'Live camera wordt hier geblokkeerd. Gebruik "Foto of video maken": op een telefoon opent dat de camera.';
+    $('srcNote').classList.add('warn');
+  }
+};
+
+
+// ---- controls ----
+function setPaused(p){
+  state.paused = p; $('btnPause').setAttribute('aria-pressed', String(p)); $('btnPause').textContent = p ? 'Verder' : 'Pauze';
+  if (state.video && state.source !== 'test'){ if (p) state.video.pause(); else state.video.play().catch(() => {}); }
+}
+$('btnPause').onclick = () => setPaused(!state.paused);
+// one button for the EPROM socket: out when there is one, in when it is empty
+let savedEprom = '';
+function updEject(){
+  const has = $('rxStation').value !== '-1';
+  $('btnEject').textContent = has ? 'Eruit' : 'Erin';
+  $('btnEject').title = has ? 'EPROM verwijderen' : 'EPROM erin doen';
+}
+$('btnEject').onclick = () => {
+  const v = $('rxStation').value;
+  if (v !== '-1'){ savedEprom = v; $('rxStation').value = '-1'; }
+  else $('rxStation').value = savedEprom || (tableOf(txStation()) === 0 ? '0' : '1');   // the EPROM you took out, or else the one for the transmitter
+  updEject(); state.crack = null; setView('rx');
+};
+$('rxStation').addEventListener('change', updEject);
+updEject();
+const sysNotes = [
+  'RTL 4 verving alleen de sync. Zonder decoder scheurt het beeld, maar de kleuren kloppen.',
+  'RTL 5 keerde daarnaast het hele beeld om en op willekeurige momenten weer terug: negatief, met de complementaire kleuren.',
+  'Veronica gebruikte dezelfde codering als RTL 5: een decoder met de RTL 5-EPROM ontsleutelt het ook.',
+  'SBS 6 gebruikte dezelfde codering als RTL 5: een decoder met de RTL 5-EPROM ontsleutelt het ook.'
+];
+function updateSysNote(){ $('sysNote').textContent = sysNotes[txStation()]; }
+updateSysNote();
+$('txStation').addEventListener('change', () => { updateSysNote(); state.crack = null; render(); });
+$('rxStation').addEventListener('change', () => { state.crack = null; render(); });
+$('optSound').addEventListener('change', () => render());
+$('optCarrier').addEventListener('change', () => render());
+function updSrcSnd(){ const on = $('optSrcSnd').checked; $('optSound').disabled = on; $('optSound').parentElement.style.opacity = on ? .5 : ''; render(); }
+$('optSrcSnd').addEventListener('change', updSrcSnd);
+$('optRestore').addEventListener('change', e => { $('restoreBox').hidden = !e.target.checked; render(); });
+$('optRestoreAmt').addEventListener('input', e => { $('restoreVal').textContent = e.target.value + ' dB'; if (snd.restore) snd.restore.set(+e.target.value); });
+$('optCrack').addEventListener('change', () => { state.crack = null; render(); });
+for (const id of ['optFrame', 'optNeg']) $(id).addEventListener('input', () => { state.crack = null; render(); });
+
+$('btnCrack').onclick = async () => {
+  if (state.cracking) return;
+  setPaused(true);
+  state.cracking = true; state.crack = null; $('btnCrack').disabled = true; render();
+  const ch = state.channel, info = state.chInfo;
+  try {
+    if (!info) throw new Error('no signal');
+    const prog = async f => { state.msg = 'Kraken ' + Math.round(f * 100) + '%'; render(); await new Promise(r => setTimeout(r, 0)); };
+    const plan = await crack(ch, $('optCrack').value, prog);
+    const img = new ImageData(W, H);
+    unscramble(ch, img, plan);
+    const truth = state.chTrue || truePlan(info.station, info.frame);
+    const sc = planScore(truth, plan);
+    state.crack = { img, score: `${sc.ok}/${sc.tot} lijnen goed` }; state.msg = 'Klaar';
+  } catch (e) { state.msg = 'Kraken mislukt'; }
+  state.cracking = false; $('btnCrack').disabled = false; render();
+};
+
+// ---- virtual video recorder: play, pause, wind, step by frame and a position slider for a video source ----
+const VCR = (() => {
+  const SPEEDS = [2, 4, 8];
+  let mode = 'play', speed = 0, rewTimer = 0, seeking = false, wasMuted = null;
+  const v = () => (state.source === 'video' ? state.video : null);
+  const fmt = t => { if (!isFinite(t)) t = 0; t = Math.max(0, Math.floor(t)); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60; return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
+  // with the picture paused the app does not redraw, so after a jump draw one picture by hand
+  function redraw(){ const p = state.paused; state.paused = false; try { step(); } finally { state.paused = p; } }
+  function mute(on){
+    const el = v(); if (!el) return;
+    if (on){ if (wasMuted === null){ wasMuted = el.muted; el.muted = true; } }
+    else if (wasMuted !== null){ el.muted = wasMuted; wasMuted = null; }
+  }
+  function stopWind(){
+    clearInterval(rewTimer); rewTimer = 0; speed = 0;
+    const el = v(); if (el) el.playbackRate = 1;
+    mute(false);
+  }
+  function play(){ stopWind(); mode = 'play'; setPaused(false); ui(); }
+  function pause(){ stopWind(); mode = 'pause'; setPaused(true); ui(); }
+  function nextSpeed(m){ speed = mode === m ? SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] : SPEEDS[0]; mode = m; }
+  function ff(){
+    const el = v(); if (!el) return;
+    clearInterval(rewTimer); rewTimer = 0;
+    nextSpeed('ff'); mute(true);
+    setPaused(false); el.playbackRate = speed; el.play().catch(() => {});
+    ui();
+  }
+  function rew(){
+    const el = v(); if (!el) return;
+    nextSpeed('rew'); mute(true);
+    setPaused(false); el.pause(); el.playbackRate = 1;          // the app keeps drawing; the tape runs backwards by jumps
+    clearInterval(rewTimer);
+    rewTimer = setInterval(() => {
+      const e = v(); if (!e){ stopWind(); return; }
+      if (seeking) return;
+      const t = e.currentTime - speed * 0.08;
+      if (t <= 0){ e.currentTime = 0; pause(); return; }
+      seeking = true; e.currentTime = t;
+    }, 80);
+    ui();
+  }
+  function jump(t){
+    const el = v(); if (!el || !isFinite(el.duration)) return;
+    el.currentTime = Math.max(0, Math.min(el.duration - 0.01, t));
+  }
+  function frame(dir){ const el = v(); if (!el) return; if (mode !== 'pause') pause(); jump(el.currentTime + dir / 25); }
+  function ui(){
+    const el = v(), show = !!el;
+    $('fsVcr').hidden = !show;
+    if (!show) return;
+    if (state.paused && mode !== 'pause' && mode !== 'rew') mode = 'pause';
+    if (!state.paused && mode === 'pause') mode = 'play';
+    $('vcrPlay').setAttribute('aria-pressed', String(mode === 'play'));
+    $('vcrPause').setAttribute('aria-pressed', String(mode === 'pause'));
+    $('vcrFf').setAttribute('aria-pressed', String(mode === 'ff'));
+    $('vcrRew').setAttribute('aria-pressed', String(mode === 'rew'));
+    $('vcrFf').textContent = mode === 'ff' ? `▶▶ ${speed}×` : '▶▶';
+    $('vcrRew').textContent = mode === 'rew' ? `◀◀ ${speed}×` : '◀◀';
+    const d = el.duration, t = el.currentTime;
+    $('vcrTime').textContent = `${fmt(t)} / ${fmt(d)}`;
+    if (!$('vcrPos').matches(':active')) $('vcrPos').value = isFinite(d) && d > 0 ? Math.round(1000 * t / d) : 0;
+  }
+  function bind(el){
+    if (!el || el._vcr) return; el._vcr = true;
+    el.addEventListener('seeked', () => { seeking = false; if (state.paused || mode === 'rew') redraw(); ui(); });
+    el.addEventListener('loadstart', () => { stopWind(); mode = 'play'; });
+    el.addEventListener('ended', () => { if (mode === 'ff'){ stopWind(); mode = 'pause'; setPaused(true); ui(); } });
+  }
+  $('vcrStart').onclick = () => { jump(0); };
+  $('vcrRew').onclick = rew;
+  $('vcrBack').onclick = () => frame(-1);
+  $('vcrPlay').onclick = play;
+  $('vcrPause').onclick = pause;
+  $('vcrFwd').onclick = () => frame(1);
+  $('vcrFf').onclick = ff;
+  $('vcrPos').addEventListener('input', e => { const el = v(); if (el && isFinite(el.duration)) jump(el.duration * e.target.value / 1000); });
+  setInterval(() => { const el = v(); if (el) bind(el); else if (mode !== 'play'){ stopWind(); mode = 'play'; } ui(); }, 200);
+  return { stop: stopWind };
+})();
+
+// ---- saving (needs the downloads capability) ----
+let dl = null;
+(async () => {
+  try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+  // outside Claude (a normal website or a local file) save the plain way, with a download link
+  if (!dl && !window.claude) dl = { save: async ({ filename, data }) => { const a = document.createElement('a'), u = URL.createObjectURL(data); a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); } };
+  if (!dl) return;
+  $('fsSave').hidden = false;
+  const canRec = typeof MediaRecorder !== 'undefined' && typeof out.captureStream === 'function';
+  $('btnRec').hidden = !canRec;
+})();
+async function offer(filename, blob){
+  try { await dl.save({ filename, data: blob }); $('saveNote').textContent = 'Opgeslagen: ' + filename; }
+  catch (e) {
+    const code = e && e.code;
+    $('saveNote').textContent = code === 'declined' ? 'Niet opgeslagen.' : code === 'rate_limited' ? 'Er staat al een opslagvraag open.' : 'Opslaan lukt hier niet.';
+  }
+}
+$('btnSave').onclick = () => {
+  const name = `luxcrypt-${state.view}-${String(state.chInfo ? state.chInfo.frame : 0).padStart(5, '0')}.png`;
+  out.toBlob(b => { if (b) offer(name, b); }, 'image/png');
+};
+let rec = null, chunks = [];
+$('btnRec').onclick = () => {
+  if (rec){ rec.stop(); return; }
+  const types = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  const type = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  const stream = out.captureStream(25);
+  if (snd.on && snd.rec) snd.rec.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+  try { rec = new MediaRecorder(stream, type ? { mimeType: type, videoBitsPerSecond: 8e6 } : undefined); }
+  catch (e) { $('saveNote').textContent = 'Opnemen wordt hier niet ondersteund.'; $('btnRec').hidden = true; return; }
+  chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    const mime = rec.mimeType || type || 'video/webm', ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: mime }); rec = null;
+    $('btnRec').setAttribute('aria-pressed', 'false'); $('btnRec').textContent = 'Opnemen';
+    offer(`luxcrypt-${state.view}.${ext}`, blob);
+  };
+  rec.start(500);
+  $('btnRec').setAttribute('aria-pressed', 'true'); $('btnRec').textContent = 'Stop opname';
+};
+
+// ---- CRT look (display only) ----
+// ---- CRT picture tube (WebGL): only for the eye; #out keeps the real pixels for saving and recording ----
+const CRT = (() => {
+  let gl = null, glc = null, src = null, progP = null, progD = null, quad = null;
+  let texSrc = null, acc = [], fbo = [], ping = 0, raf = 0, running = false, failed = false, sw = 0, sh = 0, lastT = 0;
+  const VS = 'attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
+  // phosphor persistence: each colour fades at its own rate (green and red linger, blue goes first)
+  const FS_P = `precision mediump float;varying vec2 v;uniform sampler2D cur,prev;uniform vec3 decay;
+    void main(){vec3 c=texture2D(cur,vec2(v.x,1.0-v.y)).rgb;vec3 q=texture2D(prev,v).rgb*decay;gl_FragColor=vec4(max(c,q),1.0);}`;
+  // the tube: curved glass, beam lines whose width grows with brightness, glow, a slot mask, slight misconvergence, darker corners
+  const FS_D = `precision mediump float;varying vec2 v;uniform sampler2D img;uniform vec2 srcSize,outSize;uniform float lines,dpr;uniform vec2 os;
+    vec2 bend(vec2 u){vec2 c=u*2.0-1.0;c*=1.0+0.045*dot(c,c)*vec2(0.85,1.0);return c*0.5+0.5;}
+    vec3 px(vec2 u){return texture2D(img,u).rgb;}
+    void main(){
+      vec2 u=bend(v);
+      if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){gl_FragColor=vec4(0.0,0.0,0.0,1.0);return;}
+      u=os+u*(1.0-2.0*os);
+      float conv=0.7/srcSize.x;
+      vec3 col=vec3(px(u+vec2(conv,0.0)).r,px(u).g,px(u-vec2(conv,0.0)).b);
+      vec3 glow=vec3(0.0);vec2 t=1.0/srcSize;
+      for(int i=-2;i<=2;i++)for(int j=-2;j<=2;j++){vec2 o=vec2(float(i),float(j))*t*2.2;glow+=px(u+o);}
+      glow/=25.0;
+      float y=u.y*lines,f=fract(y)-0.5;float lum=dot(col,vec3(0.299,0.587,0.114));
+      float w=mix(0.26,0.5,lum);float beam=exp(-f*f/(2.0*w*w));
+      col*=mix(0.35,1.15,beam);
+      col+=glow*glow*0.55;
+      float mx=mod(floor(gl_FragCoord.x/max(1.0,dpr)),3.0);
+      float my=mod(floor(gl_FragCoord.y/max(1.0,dpr))+(mod(floor(gl_FragCoord.x/max(1.0,dpr)/3.0),2.0)*2.0),4.0);
+      vec3 mask=mx<1.0?vec3(1.0,0.72,0.72):mx<2.0?vec3(0.72,1.0,0.72):vec3(0.72,0.72,1.0);
+      if(my<1.0)mask*=0.82;
+      col*=mask*1.28;
+      vec2 c=v*2.0-1.0;col*=1.0-0.28*pow(dot(c*vec2(0.8,1.0),c*vec2(0.8,1.0))*0.5,1.6);
+      gl_FragColor=vec4(pow(col,vec3(0.96)),1.0);
+    }`;
+  function sh_(t, s){ const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
+  function prog(fs){ const p = gl.createProgram(); gl.attachShader(p, sh_(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh_(gl.FRAGMENT_SHADER, fs)); gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+  function tex(w, h){
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (w) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    return t;
+  }
+  function init(source){
+    if (gl) return true;
+    if (failed) return false;
+    try {
+      src = source;
+      glc = document.createElement('canvas'); glc.className = 'crtgl'; glc.setAttribute('aria-hidden', 'true');
+      gl = glc.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: false });
+      if (!gl) throw new Error('geen WebGL');
+      progP = prog(FS_P); progD = prog(FS_D);
+      quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      texSrc = tex();
+      glc.addEventListener('webglcontextlost', e => { e.preventDefault(); failed = true; stop(); if (CRT.onfail) CRT.onfail(); });
+      src.parentNode.appendChild(glc);
+      return true;
+    } catch (e) { failed = true; gl = null; if (glc && glc.parentNode) glc.remove(); return false; }
+  }
+  function sizeTargets(){
+    if (sw === src.width && sh === src.height) return;
+    sw = src.width; sh = src.height; acc = [tex(sw, sh), tex(sw, sh)]; fbo = [];
+    for (let i = 0; i < 2; i++){ const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, acc[i], 0); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); fbo.push(f); }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+  function draw(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), w = Math.max(1, Math.round(glc.clientWidth * dpr)), h = Math.max(1, Math.round(glc.clientHeight * dpr));
+    if (glc.width !== w || glc.height !== h){ glc.width = w; glc.height = h; }
+    sizeTargets();
+    gl.bindTexture(gl.TEXTURE_2D, texSrc); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    // persistence pass into the next accumulation buffer; decay scaled to the real frame time
+    const now = performance.now(), dt = lastT ? Math.min(100, now - lastT) : 16; lastT = now;
+    const k = dt / 16.7, nxt = 1 - ping;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[nxt]); gl.viewport(0, 0, sw, sh); gl.useProgram(progP);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texSrc); gl.uniform1i(gl.getUniformLocation(progP, 'cur'), 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, acc[ping]); gl.uniform1i(gl.getUniformLocation(progP, 'prev'), 1);
+    gl.uniform3f(gl.getUniformLocation(progP, 'decay'), Math.pow(0.62, k), Math.pow(0.66, k), Math.pow(0.45, k));
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    ping = nxt;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(progD);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, acc[ping]); gl.uniform1i(gl.getUniformLocation(progD, 'img'), 0);
+    gl.uniform2f(gl.getUniformLocation(progD, 'srcSize'), sw, sh);
+    gl.uniform2f(gl.getUniformLocation(progD, 'outSize'), w, h);
+    gl.uniform1f(gl.getUniformLocation(progD, 'lines'), sh / 2);          // one visible beam line per field line
+    gl.uniform1f(gl.getUniformLocation(progD, 'dpr'), dpr);
+    // overscan: a tube showed less than the full line and field, so the edges (and the data lines on top) fell outside the glass
+    gl.uniform2f(gl.getUniformLocation(progD, 'os'), CRT.overscan ? 0.055 : 0, CRT.overscan ? 0.045 : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  function loop(){ if (!running) return; raf = requestAnimationFrame(loop); if (document.hidden) return; try { draw(); } catch (e) { failed = true; stop(); if (CRT.onfail) CRT.onfail(); } }
+  function start(source){ if (!init(source)) return false; glc.hidden = false; if (!running){ running = true; lastT = 0; loop(); } return true; }
+  function stop(){ running = false; cancelAnimationFrame(raf); if (glc) glc.hidden = true; }
+  return { start, stop, onfail: null, overscan: true, get ok(){ return !failed; } };
+})();
+function setCrt(on){
+  const bz = $('bezel');
+  const gl = on && CRT.start($('out'));
+  if (!on) CRT.stop();
+  CRT.overscan = $('optOverscan').checked;
+  $('lblOverscan').hidden = !on;
+  bz.classList.toggle('crtgl', !!gl);
+  bz.classList.toggle('crt', on && !gl);                  // without WebGL: the simple CSS version
+  bz.classList.toggle('os', on && CRT.overscan);
+  try { localStorage.setItem('crt', on ? '1' : '0'); } catch (e) {}
+}
+CRT.onfail = () => { if ($('optCrt').checked) setCrt(true); };
+try { if (localStorage.getItem('overscan') === '0') $('optOverscan').checked = false; } catch (e) {}
+$('optOverscan').addEventListener('change', e => { try { localStorage.setItem('overscan', e.target.checked ? '1' : '0'); } catch (x) {} setCrt($('optCrt').checked); });
+try { if (localStorage.getItem('crt') === '1') $('optCrt').checked = true; } catch (e) {}
+setCrt($('optCrt').checked);
+$('optCrt').addEventListener('change', e => setCrt(e.target.checked));
+</script>
+
+</body></html>
