@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Analoge Crypt</title>
+<meta name="description" content="Vijf browserapps die de analoge betaal-tv-scrambling van de jaren 80 en 90 nabootsen: VideoCrypt, Syster, Luxcrypt, Eurocrypt en het verzonnen Fantasycrypt.">
+<link rel="icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap">
+<style>
+/* Layout: a rack of five receivers, each a front panel with its own display colour, as in the apps themselves. */
+:root{
+  --case:#c7c8cb; --panel:#e0e1e3; --ink:#1c1d20; --muted:#5b5e64; --rule:#afb1b6; --led:#d3352b;
+  --glass:#0b0d10; --focus:#2a6fdb;
+  --vc:#8fe3c4; --sy:#ffb347; --lx:#9fd8ff; --ec:#ff7a66; --fc:#c9a8ff;
+  --font-ui:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-vfd:"VT323","IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{--case:#16171a;--panel:#212226;--ink:#e6e7ea;--muted:#9da1a8;--rule:#36383d;--led:#ff5d50;--glass:#050608;--focus:#7fb0ff;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--case);color:var(--ink);font:16px/1.5 var(--font-ui)}
+.wrap{max-width:820px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lang{display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:2px}
+.lang button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 12px var(--font-mono);letter-spacing:.08em;padding:5px 9px;border-radius:4px;cursor:pointer;min-height:28px}
+.lang button[aria-pressed="true"]{background:var(--case);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.lang button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+html[lang="en"] .l-nl,html:not([lang="en"]) .l-en{display:none}
+h1{margin:0;font:500 26px var(--font-mono);letter-spacing:.3em;text-transform:uppercase;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted)}
+.rack{display:flex;flex-direction:column;gap:12px}
+a.unit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;align-items:center;text-decoration:none;color:inherit;
+  background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;transition:border-color .15s}
+a.unit:hover{border-color:var(--muted)}
+a.unit:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.vfd{background:var(--glass);border-radius:6px;padding:6px 12px;font:22px/1.1 var(--font-vfd);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;
+  color:var(--c);text-shadow:0 0 6px color-mix(in srgb,var(--c) 45%,transparent);justify-self:start}
+.meta{font:12px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:right}
+.desc{grid-column:1 / -1;margin:0;max-width:70ch}
+.go{grid-column:1 / -1;font:500 14px var(--font-ui);color:var(--muted)}
+.go::after{content:" →"}
+section{display:flex;flex-direction:column;gap:8px}
+h2{margin:0;font:500 12px var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+section p{margin:0;max-width:70ch}
+footer{border-top:1px solid var(--rule);padding-top:14px;color:var(--muted);font-size:14px}
+footer p{margin:0 0 6px;max-width:72ch}
+a{color:inherit}
+@media (max-width:520px){a.unit{grid-template-columns:1fr}.meta{text-align:left}}
+@media (prefers-reduced-motion: reduce){a.unit{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top"><h1><span class="l-nl">Analoge Crypt</span><span class="l-en">Analog Crypt</span></h1><div class="lang" role="group" aria-label="Taal / Language"><button type="button" data-l="nl">NL</button><button type="button" data-l="en">EN</button></div></div>
+    <p class="lead"><span class="l-nl">Vijf apps die de betaal-tv-scrambling van de jaren 80 en 90 nabootsen. Scramble je eigen foto's, video's of de camera, kijk mee als abonnee met de juiste kaart, of kraak het beeld als piraat. Alles draait in je browser; er wordt niets geüpload.</span><span class="l-en">Five apps that recreate the pay-TV scrambling of the 1980s and 1990s. Scramble your own photos, videos or camera, watch as a subscriber with the right card, or crack the picture as a pirate. Everything runs in your browser; nothing is uploaded. Every app has an NL/EN switch at the top.</span></p>
+  </header>
+
+  <nav class="rack" aria-label="Apps">
+    <a class="unit" href="videocrypt/" style="--c:var(--vc)">
+      <span class="vfd">VideoCrypt</span><span class="meta">Sky · BBC Select · 1990</span>
+      <p class="desc"><span class="l-nl">Elke lijn op een van 256 punten doorgeknipt en rondgedraaid, met de PAL-kleurfout die daarbij hoort. Ook VideoCrypt S met verwisselde lijnen, en geluid met spectrale inversie.</span><span class="l-en">Every line cut at one of 256 points and rotated, with the PAL colour error that goes with it. Also VideoCrypt S with swapped lines, and sound with spectral inversion.</span></p>
+      <span class="go"><span class="l-nl">Openen</span><span class="l-en">Open</span></span>
+    </a>
+    <a class="unit" href="syster/" style="--c:var(--sy)">
+      <span class="vfd">Syster</span><span class="meta">Canal+ · Premiere · 1990–1998</span>
+      <p class="desc"><span class="l-nl">Nagravision Syster: per veld 287 lijnen gehusseld via een buffer van 32 lijnen, met de echte sleuteltabellen. Ook Discret 11 en Smartcrypt (Syster plus knippen en draaien).</span><span class="l-en">Nagravision Syster: 287 lines per field shuffled through a 32-line buffer, with the real key tables. Also Discret 11 and Smartcrypt (Syster plus cut and rotate).</span></p>
+      <span class="go"><span class="l-nl">Openen</span><span class="l-en">Open</span></span>
+    </a>
+    <a class="unit" href="luxcrypt/" style="--c:var(--lx)">
+      <span class="vfd">Luxcrypt</span><span class="meta">RTL 4 · RTL 5 · Veronica · SBS 6</span>
+      <p class="desc"><span class="l-nl">De lijnsync vervangen door een burst van 4 MHz, en bij RTL 5 het hele beeld op willekeurige momenten in negatief. Het geheim zat in een EPROM, niet in een kaart.</span><span class="l-en">The line sync replaced by a 4 MHz burst, and on RTL 5 the whole picture turned negative at random moments. The secret was in an EPROM, not a card.</span></p>
+      <span class="go"><span class="l-nl">Openen</span><span class="l-en">Open</span></span>
+    </a>
+    <a class="unit" href="eurocrypt/" style="--c:var(--ec)">
+      <span class="vfd">Eurocrypt</span><span class="meta">D2-MAC · FilmNet · TV1000</span>
+      <p class="desc"><span class="l-nl">Kleur en helderheid na elkaar in de lijn, elk apart doorgeknipt en rondgedraaid. Met het ruwe MAC-signaal, de paars-groene gloed van de enkele snede en het beeld op een gewone PAL-ontvanger.</span><span class="l-en">Colour and brightness one after the other in the line, each cut and rotated separately. With the raw MAC signal, the purple-green glow of the single cut, and the picture on an ordinary PAL receiver.</span></p>
+      <span class="go"><span class="l-nl">Openen</span><span class="l-en">Open</span></span>
+    </a>
+    <a class="unit" href="fantasycrypt/" style="--c:var(--fc)">
+      <span class="vfd">Fantasycrypt</span><span class="meta"><span class="l-nl">Verzonnen · nooit uitgezonden</span><span class="l-en">Made up · never broadcast</span></span>
+      <p class="desc"><span class="l-nl">Elke pixel of elk blokje over het hele beeld verdeeld. Onkraakbaar, en precies daarom destijds onbruikbaar: kies satelliet, videorecorder of YouTube en zie waarom.</span><span class="l-en">Every pixel or little block spread over the whole picture. Uncrackable, and for exactly that reason unusable at the time: pick satellite, video recorder or YouTube and see why.</span></p>
+      <span class="go"><span class="l-nl">Openen</span><span class="l-en">Open</span></span>
+    </a>
+  </nav>
+
+  <section>
+    <h2><span class="l-nl">In alle apps</span><span class="l-en">In every app</span></h2>
+    <p><span class="l-nl">Testbeeld met eigen herkenningsmelodie, foto of video, live camera met microfoon. Drie weergaven: Uitzending, Ontvanger met kaart en Piraat. Een datastreep bovenin, zodat een opgeslagen gescrambeld beeld of filmpje later weer herkend en ontsleuteld wordt. Een virtuele videorecorder, een CRT-beeldbuis met overscan, en opslaan als PNG of video.</span><span class="l-en">Test card with its own ident tune, photo or video, live camera with microphone. Three views: Broadcast, Receiver with card, and Pirate. A data stripe at the top, so a saved scrambled picture or clip is recognised and decoded later. A virtual video recorder, a CRT picture tube with overscan, and saving as PNG or video.</span></p>
+  </section>
+
+  <section>
+    <h2><span class="l-nl">Hoe echt is het</span><span class="l-en">How real is it</span></h2>
+    <p><span class="l-nl">Waar de techniek bekend is, volgen de apps die zo precies mogelijk, vaak naar de broncode van hacktv. Wat niet bekend is, is ingevuld en staat in elke app onderaan als aanname. Er zitten geen echte kaartsleutels in. Dit is bedoeld als technische geschiedenis en speelgoed, niet om echte uitzendingen te ontsleutelen; die bestaan ook allang niet meer.</span><span class="l-en">Where the technique is documented, the apps follow it as closely as possible, often after the hacktv source code. Where it is not, the gaps are filled in and listed at the bottom of each app as assumptions. No real card keys are included. This is meant as technical history and a toy, not for decoding real broadcasts; those are long gone anyway.</span></p>
+  </section>
+
+  <footer>
+    <p class="l-nl">Gemaakt door Daniel, met hulp van Claude. Vrijgegeven onder de <a href="LICENSE">GNU GPL versie 3</a>, omdat delen van de code zijn afgeleid van <a href="https://github.com/fsphil/hacktv">hacktv</a> van Philip Heron en Alex L. James.</p><p class="l-en">Made by Daniel, with help from Claude. Released under the <a href="LICENSE">GNU GPL version 3</a>, because parts of the code are derived from <a href="https://github.com/fsphil/hacktv">hacktv</a> by Philip Heron and Alex L. James.</p>
+    <p class="l-nl">Met dank aan <a href="https://github.com/Potomac/cryptimage">Cryptimage</a>, Markus Kuhn (VideoCrypt en Nagravision), Michael Niedermayer (Syster) en Fabien Sanglard (Discret 11), wier werk de basis was.</p><p class="l-en">With thanks to <a href="https://github.com/Potomac/cryptimage">Cryptimage</a>, Markus Kuhn (VideoCrypt and Nagravision), Michael Niedermayer (Syster) and Fabien Sanglard (Discret 11), whose work was the foundation.</p>
+  </footer>
+</div>
+<script>
+(() => {
+  let l = 'nl';
+  try { l = localStorage.getItem('lang') || ((navigator.language || '').toLowerCase().startsWith('nl') ? 'nl' : 'en'); } catch (e) { l = (navigator.language || '').toLowerCase().startsWith('nl') ? 'nl' : 'en'; }
+  const set = v => { l = v; document.documentElement.lang = v; try { localStorage.setItem('lang', v); } catch (e) {} document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === v))); };
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => set(b.dataset.l)));
+  set(l);
+})();
+</script>
+</body>
+</html>
