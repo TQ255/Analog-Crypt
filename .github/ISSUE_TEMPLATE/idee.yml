@@ -1,0 +1,16 @@
+name: Idee of verbetering / Idea or improvement
+description: Een nieuw systeem, een functie, of iets dat historisch niet klopt. / A new system, a feature, or something that is historically wrong.
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: Over welke app? / About which app?
+      options: [VideoCrypt, Syster, Luxcrypt, Eurocrypt, Fantasycrypt, Een nieuwe app / A new app, Algemeen / General]
+  - type: textarea
+    id: idea
+    attributes:
+      label: Je idee / Your idea
+      description: Weet je hoe het destijds echt werkte? Bronnen zijn heel welkom. / Do you know how it really worked back then? Sources are very welcome.
+    validations:
+      required: true

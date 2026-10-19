@@ -1,0 +1,28 @@
+name: Fout melden / Report a bug
+description: Er werkt iets niet zoals het hoort. / Something does not work as it should.
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: Welke app? / Which app?
+      options: [VideoCrypt, Syster, Luxcrypt, Eurocrypt, Fantasycrypt, Startpagina / Start page]
+    validations:
+      required: true
+  - type: dropdown
+    id: view
+    attributes:
+      label: Welk tabblad? / Which tab?
+      options: [Uitzending / Broadcast, Ontvanger / Receiver, Piraat / Pirate, Weet ik niet / Not sure]
+  - type: textarea
+    id: what
+    attributes:
+      label: Wat zag je? / What did you see?
+      description: Wat deed je, wat gebeurde er, en wat had je verwacht? Een schermafbeelding helpt. / What did you do, what happened, and what did you expect? A screenshot helps.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser en apparaat / Browser and device
+      placeholder: bv. Chrome op Android, Safari op iPhone / e.g. Chrome on Android, Safari on iPhone
