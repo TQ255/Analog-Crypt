@@ -287,6 +287,8 @@ body.fslock{overflow:hidden}
     const k = norm(s);
     if (!k || !/[a-zà-ü]/i.test(k)) return null;
     if (D[k] !== undefined) return D[k];
+    const fps = k.match(/^(.*) · ([\d.]+) beelden\/s$/);
+    if (fps){ const a = tr(fps[1]); return (a === null ? fps[1] : a) + ' · ' + fps[2] + ' frames/s'; }
     for (const [re, rep] of R){ const m = k.match(re); if (m) return rep.replace(/\$(\d)/g, (_, i) => frag(m[+i] || '')); }
     return null;
   }
@@ -1215,15 +1217,15 @@ $('optRestoreAmt').addEventListener('input', e => { $('restoreVal').textContent 
 $('optCrack').addEventListener('change', () => { state.crack = null; render(); });
 for (const id of ['txKey', 'rxKey', 'optPal', 'optFrame', 'optNeg']) $(id).addEventListener('input', () => { state.crack = null; render(); });
 
-$('btnCrack').onclick = async () => {
+$('btnCrack').onclick = async (ev, live) => {
   if (state.cracking) return;
-  setPaused(true);
-  state.cracking = true; state.crack = null; $('btnCrack').disabled = true; render();
+  if (!live) setPaused(true);
+  state.cracking = true; if (!live){ state.crack = null; render(); } $('btnCrack').disabled = true;
   const ch = state.channel, info = state.chInfo;
   try {
     if (!info) throw new Error('no signal');
     const method = $('optCrack').value;
-    const prog = async f => { state.msg = 'Kraken ' + Math.round(f * 100) + '%'; render(); await tick0(); };
+    const prog = live ? null : async f => { state.msg = 'Kraken ' + Math.round(f * 100) + '%'; render(); await tick0(); };
     const plan = info.mode === 'd11' ? await crackD11(ch, info, method, prog) : await crackSyster(ch, info, method, prog);
     const img = new ImageData(W, H);
     unscramble(ch, img, plan, info.pal);
@@ -1523,6 +1525,38 @@ $('optCrt').addEventListener('change', e => setCrt(e.target.checked));
     else if (e.key === 'ArrowLeft'){ pick((cur + fsTabs.length - 1) % fsTabs.length); e.preventDefault(); }
   });
 })();
-</script><!--/fs-->
+</script>
+<!--live--><script>
+// keeps cracking whatever is on the air, as fast as the computer allows; the picture lags a little behind
+(() => {
+  const btn = document.getElementById('btnCrack'); if (!btn || document.getElementById('btnLiveCrack')) return;
+  const lb = document.createElement('button');
+  lb.type = 'button'; lb.className = 'btn'; lb.id = 'btnLiveCrack'; lb.setAttribute('aria-pressed', 'false'); lb.textContent = 'Doorlopend kraken';
+  btn.after(lb);
+  let on = false, busy = false, avg = 0;
+  const stop = () => { on = false; lb.setAttribute('aria-pressed', 'false'); lb.textContent = 'Doorlopend kraken'; };
+  lb.addEventListener('click', () => {
+    if (on){ stop(); return; }
+    on = true; avg = 0; lb.setAttribute('aria-pressed', 'true'); lb.textContent = 'Stop met kraken';
+    state.crack = null; setPaused(false);
+  });
+  btn.addEventListener('click', e => { if (e.isTrusted) stop(); }, true);    // one picture by hand stops the stream
+  for (const id of ['tab-tx', 'tab-rx']){ const t = document.getElementById(id); if (t) t.addEventListener('click', stop); }
+  async function once(){
+    busy = true; const t0 = performance.now();
+    try { await btn.onclick(null, true); } catch (e) {}
+    const dt = performance.now() - t0; avg = avg ? 0.8 * avg + 0.2 * dt : dt;
+    if (on && state.crack) state.crack.score = (state.crack.score ? state.crack.score + ' · ' : '') + (1000 / avg).toFixed(1) + ' beelden/s';
+    busy = false;
+    if (on) render();
+  }
+  const orig = step;
+  step = function(){
+    orig();
+    if (on && state.view === 'crack' && !state.paused && !state.cracking && !busy) once();
+  };
+})();
+</script><!--/live-->
+<!--/fs-->
 
 </body></html>
