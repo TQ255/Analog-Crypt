@@ -116,6 +116,12 @@ footer a{color:inherit}
 .bezel.fs .fsbtn{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
 .bezel.fs.idle{cursor:none}.bezel.fs.idle .fsbtn{opacity:0}
 body.fslock{overflow:hidden}
+.fstabs{display:none}
+.bezel.fs .fstabs{display:flex;position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;gap:4px;padding:4px;border-radius:10px;background:rgba(0,0,0,.6);transition:opacity .2s}
+.fstabs button{appearance:none;border:0;background:transparent;color:#ddd;font:600 15px var(--font-ui,system-ui);padding:10px 14px;border-radius:7px;cursor:pointer;min-height:40px}
+.fstabs button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#111}
+.fstabs button:focus-visible{outline:2px solid var(--focus,#2a6fdb);outline-offset:1px}
+.bezel.fs.idle .fstabs{opacity:0;pointer-events:none}
 @media (prefers-reduced-motion: reduce){.fsbtn{transition:none}}
 </style><!--/fs-->
 
@@ -128,7 +134,7 @@ body.fslock{overflow:hidden}
     <div class="hdr-r"><div class="lang" role="group" aria-label="Taal / Language" data-noi18n><button type="button" data-l="en" lang="en">EN</button><button type="button" data-l="nl" lang="nl">NL</button></div><div class="standby"><i></i><span id="ledtxt">Uitzending</span></div></div>
   </header>
 
-  <div class="bezel" id="bezel"><!--fs--><button type="button" class="fsbtn" id="btnFs" aria-label="Volledig scherm" title="Volledig scherm"><svg class="en" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="ex" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><!--/fs--><div class="screen"><canvas id="out" width="768" height="592" aria-label="Beeld"></canvas></div></div>
+  <div class="bezel" id="bezel"><!--fs--><button type="button" class="fsbtn" id="btnFs" aria-label="Volledig scherm" title="Volledig scherm"><svg class="en" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="ex" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><div class="fstabs" role="group" aria-label="Weergave"><button type="button" data-t="tab-tx">Uitzending</button><button type="button" data-t="tab-rx">Ontvanger</button><button type="button" data-t="tab-crack">Piraat</button></div><!--/fs--><div class="screen"><canvas id="out" width="768" height="592" aria-label="Beeld"></canvas></div></div>
 
   <div class="vfd" id="vfd" aria-live="polite">
     <span id="vfdFrame">Frame 00000</span><span id="vfdCard">Kaart --</span><span id="vfdPal">Dubbele snede</span><span id="vfdSound">Geluid uit</span><span id="vfdMsg" class="dim">Testbeeld</span>
@@ -1193,6 +1199,21 @@ $('optCrt').addEventListener('change', e => setCrt(e.target.checked));
     if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) toggle();
   });
   bz.addEventListener('pointermove', wake); bz.addEventListener('pointerdown', wake);
+
+  const fsTabs = [...bz.querySelectorAll('.fstabs button')];
+  const syncTabs = () => fsTabs.forEach(b => { const t = document.getElementById(b.dataset.t); b.setAttribute('aria-pressed', String(!!t && t.getAttribute('aria-selected') === 'true')); });
+  const pick = i => { const t = document.getElementById(fsTabs[i].dataset.t); if (t){ t.click(); syncTabs(); } wake(); };
+  fsTabs.forEach((b, i) => b.addEventListener('click', e => { e.stopPropagation(); pick(i); }));
+  bz.querySelector('.fstabs').addEventListener('dblclick', e => e.stopPropagation());
+  new MutationObserver(syncTabs).observe(document.querySelector('.tabs') || document.body, { subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+  syncTabs();
+  document.addEventListener('keydown', e => {
+    if (!bz.classList.contains('fs') || e.ctrlKey || e.metaKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+    const cur = fsTabs.findIndex(b => b.getAttribute('aria-pressed') === 'true');
+    if (e.key >= '1' && e.key <= '3'){ pick(+e.key - 1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight'){ pick((cur + 1) % fsTabs.length); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft'){ pick((cur + fsTabs.length - 1) % fsTabs.length); e.preventDefault(); }
+  });
 })();
 </script><!--/fs-->
 
