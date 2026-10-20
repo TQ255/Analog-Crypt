@@ -1075,9 +1075,9 @@ $('optRestoreAmt').addEventListener('input', e => { $('restoreVal').textContent 
 for (const id of ['txKey', 'rxKey', 'optPal', 'optFrame', 'optNeg']) $(id).addEventListener('input', () => { state.crack = null; render(); });
 
 // crack one scrambled picture; prev = the previous cracked picture of the same video (a hint for steady scenes)
-async function crackOne(ch, info, truthIn, prog, prev){
+async function crackOne(ch, info, truthIn, prog, prev, worker = false){
   const block = info ? info.block : false, isS = info ? info.shuffle : false;
-  const ks = isS ? await crackShuffle(ch, prog, info ? info.pal : false) : await crackCuts(ch, prog, block, block ? null : prev);
+  const ks = isS ? await PAR.run('crackShuffle', [ch, prog, info ? info.pal : false], worker) : await PAR.run('crackCuts', [ch, prog, block, block ? null : prev], worker);
   const img = new ImageData(W, H);
   if (isS) unshuffleWith(ch, img, ks, info ? info.pal : false); else unscrambleWith(ch, img, ks, info ? info.pal : false);
   let truth = truthIn;
@@ -1483,7 +1483,84 @@ $('optCrt').addEventListener('change', e => setCrt(e.target.checked));
     else if (e.key === 'ArrowLeft'){ pick((cur + fsTabs.length - 1) % fsTabs.length); e.preventDefault(); }
   });
 })();
-</script><!--/fs-->
+</script>
+<!--par--><script>
+// a pool of workers, each running this page's CORE code; heavy crack calls go there, results come back by message
+const PAR = (() => {
+  const N = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) - 1));
+  let pool = null, broken = false, nextId = 1, mainBusy = false;
+  const jobs = new Map();
+  function coreSource(){
+    for (const s of document.scripts){ const t = s.textContent, a = t.indexOf('/* CORE START */'), b = t.indexOf('/* CORE END */'); if (a >= 0 && b > a) return t.slice(a, b); }
+    return null;
+  }
+  function init(){
+    if (pool || broken) return;
+    try {
+      const core = coreSource(); if (!core) throw new Error('no core');
+      const tail = '\nself.onmessage = async e => { const { id, fn, args } = e.data; try { const r = await self[fn](...args); self.postMessage({ id, r }); } catch (err) { self.postMessage({ id, err: String(err && err.message || err) }); } };';
+      const url = URL.createObjectURL(new Blob([core + tail], { type: 'text/javascript' }));
+      pool = [];
+      for (let i = 0; i < N; i++){
+        const w = new Worker(url), slot = { w, busy: false };
+        w.onmessage = e => { const j = jobs.get(e.data.id); if (!j) return; jobs.delete(e.data.id); slot.busy = false; e.data.err ? j.reject(new Error(e.data.err)) : j.resolve(e.data.r); };
+        w.onerror = e => { e.preventDefault && e.preventDefault(); fail(); };
+        pool.push(slot);
+      }
+    } catch (e) { fail(); }
+  }
+  function fail(){
+    broken = true;
+    if (pool) for (const s of pool) try { s.w.terminate(); } catch (e) {}
+    pool = null;
+    for (const [id, j] of jobs){ jobs.delete(id); j.retry(); }
+  }
+  const onMain = (fn, args) => self[fn](...args);
+  return {
+    get workers(){ init(); return pool ? pool.length : 0; },
+    free(){ init(); if (pool) return pool.filter(s => !s.busy).length; return mainBusy ? 0 : 1; },
+    // fn: name of a CORE function; args may hold a progress callback, which a worker cannot take (it gets null)
+    async run(fn, args, useWorker){
+      if (useWorker){ init(); const slot = pool && pool.find(s => !s.busy);
+        if (slot){
+          const clean = args.map(a => typeof a === 'function' ? null : a);
+          return new Promise((resolve, reject) => {
+            const id = nextId++; slot.busy = true;
+            jobs.set(id, { resolve, reject, retry: () => { Promise.resolve().then(() => onMain(fn, clean)).then(resolve, reject); } });
+            try { slot.w.postMessage({ id, fn, args: clean }); } catch (e) { jobs.delete(id); slot.busy = false; Promise.resolve().then(() => onMain(fn, clean)).then(resolve, reject); }
+          });
+        }
+      }
+      mainBusy = true;
+      try { return await onMain(fn, args); } finally { mainBusy = false; }
+    }
+  };
+})();
+// frames per second over the last few finished pictures
+function makeRate(){ const t = []; return { tick(){ t.push(performance.now()); if (t.length > 12) t.shift(); }, get fps(){ return t.length < 2 ? 0 : (t.length - 1) * 1000 / (t[t.length - 1] - t[0]); }, reset(){ t.length = 0; } }; }
+</script><!--/par-->
+<!--live--><script>
+// live cracking on every core: each free worker takes the newest picture
+(() => {
+  let sent = 0, shown = 0, lastCh = null, wasOn = false;
+  const rate = makeRate();
+  liveCrackOnce = function(){
+    if (!wasOn){ wasOn = true; rate.reset(); }
+    while (PAR.free() > 0 && state.channel !== lastCh){
+      const ch = state.channel, info = state.chInfo, truth = state.chTrue, seq = ++sent;
+      lastCh = ch;
+      crackOne(ch, info, truth, null, null, true).then(res => {
+        if (!state.liveCrack) return;
+        rate.tick();
+        if (seq > shown){ shown = seq; res.score = (res.ok >= 0 ? res.score + ' · ' : '') + rate.fps.toFixed(1) + ' beelden/s'; state.crack = res; }
+      }).catch(() => {});
+    }
+  };
+  const origStop = stopLiveCrack;
+  stopLiveCrack = function(){ wasOn = false; origStop(); };
+})();
+</script><!--/live-->
+<!--/fs-->
 
 
 </body></html>
