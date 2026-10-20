@@ -905,25 +905,27 @@ for (const el of document.querySelectorAll('input[name="sys"]')) el.addEventList
 for (const id of ['optSound', 'optRaw', 'optPalRx']) $(id).addEventListener('change', () => render());
 for (const id of ['txKey', 'rxKey', 'optFree', 'optFrame', 'optNeg']) $(id).addEventListener('input', () => { state.crack = null; render(); });
 
-$('btnCrack').onclick = async (ev, live) => {
+async function crackJob(ch, info, truth, live){
+  const prog = live ? null : async f => { state.msg = 'Kraken ' + Math.round(f * 100) + '%'; render(); await new Promise(r => setTimeout(r, 0)); };
+  // free access needs no cracking: the control word is public
+  const plan = info.free ? planFor(0, info.frame, info.single, true) : await PAR.run('crack', [ch, info.single, prog], live);
+  const clear = unscrambleMux(ch, plan);
+  pctx.putImageData(decodeMux(clear), 0, 0);
+  octx.fillStyle = '#000'; octx.fillRect(0, 0, W, H); octx.imageSmoothingEnabled = true; octx.drawImage(picC, 0, BAR, W, ROWS);
+  const img = octx.getImageData(0, 0, W, H);
+  if (!truth && rxKey() && checkBits(keyHash(rxKey())) === info.check) truth = planFor(keyHash(rxKey()), info.frame, info.single, info.free);
+  let score = info.free ? 'Vrije toegang' : 'Gekraakt';
+  if (truth && !info.free){ const sc = planScore(truth, plan); score = info.single ? `${sc.okC}/${sc.tot} lijnen goed` : `Y ${sc.okY} · C ${sc.okC} van ${sc.tot}`; }
+  return { img, score };
+}
+const liveOk = () => true;
+$('btnCrack').onclick = async () => {
   if (state.cracking) return;
-  if (!live) setPaused(true);
-  state.cracking = true; if (!live){ state.crack = null; render(); } $('btnCrack').disabled = true;
-  const ch = state.channel, info = state.chInfo;
+  setPaused(true);
+  state.cracking = true; state.crack = null; render(); $('btnCrack').disabled = true;
   try {
-    if (!info) throw new Error('no signal');
-    const prog = live ? null : async f => { state.msg = 'Kraken ' + Math.round(f * 100) + '%'; render(); await new Promise(r => setTimeout(r, 0)); };
-    // free access needs no cracking: the control word is public
-    const plan = info.free ? planFor(0, info.frame, info.single, true) : await crack(ch, info.single, prog);
-    const clear = unscrambleMux(ch, plan);
-    pctx.putImageData(decodeMux(clear), 0, 0);
-    octx.fillStyle = '#000'; octx.fillRect(0, 0, W, H); octx.imageSmoothingEnabled = true; octx.drawImage(picC, 0, BAR, W, ROWS);
-    const img = octx.getImageData(0, 0, W, H);
-    let truth = state.chTrue;
-    if (!truth && rxKey() && checkBits(keyHash(rxKey())) === info.check) truth = planFor(keyHash(rxKey()), info.frame, info.single, info.free);
-    let score = info.free ? 'Vrije toegang' : 'Gekraakt';
-    if (truth && !info.free){ const sc = planScore(truth, plan); score = info.single ? `${sc.okC}/${sc.tot} lijnen goed` : `Y ${sc.okY} · C ${sc.okC} van ${sc.tot}`; }
-    state.crack = { img, score }; state.msg = 'Klaar';
+    if (!state.chInfo) throw new Error('no signal');
+    state.crack = await crackJob(state.channel, state.chInfo, state.chTrue, false); state.msg = 'Klaar';
   } catch (e) { state.msg = 'Kraken mislukt'; }
   state.cracking = false; $('btnCrack').disabled = false; render();
 };
@@ -1218,34 +1220,92 @@ $('optCrt').addEventListener('change', e => setCrt(e.target.checked));
   });
 })();
 </script>
+<!--par--><script>
+// a pool of workers, each running this page's CORE code; heavy crack calls go there, results come back by message
+const PAR = (() => {
+  const N = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) - 1));
+  let pool = null, broken = false, nextId = 1, mainBusy = false;
+  const jobs = new Map();
+  function coreSource(){
+    for (const s of document.scripts){ const t = s.textContent, a = t.indexOf('/* CORE START */'), b = t.indexOf('/* CORE END */'); if (a >= 0 && b > a) return t.slice(a, b); }
+    return null;
+  }
+  function init(){
+    if (pool || broken) return;
+    try {
+      const core = coreSource(); if (!core) throw new Error('no core');
+      const tail = '\nself.onmessage = async e => { const { id, fn, args } = e.data; try { const r = await self[fn](...args); self.postMessage({ id, r }); } catch (err) { self.postMessage({ id, err: String(err && err.message || err) }); } };';
+      const url = URL.createObjectURL(new Blob([core + tail], { type: 'text/javascript' }));
+      pool = [];
+      for (let i = 0; i < N; i++){
+        const w = new Worker(url), slot = { w, busy: false };
+        w.onmessage = e => { const j = jobs.get(e.data.id); if (!j) return; jobs.delete(e.data.id); slot.busy = false; e.data.err ? j.reject(new Error(e.data.err)) : j.resolve(e.data.r); };
+        w.onerror = e => { e.preventDefault && e.preventDefault(); fail(); };
+        pool.push(slot);
+      }
+    } catch (e) { fail(); }
+  }
+  function fail(){
+    broken = true;
+    if (pool) for (const s of pool) try { s.w.terminate(); } catch (e) {}
+    pool = null;
+    for (const [id, j] of jobs){ jobs.delete(id); j.retry(); }
+  }
+  const onMain = (fn, args) => self[fn](...args);
+  return {
+    get workers(){ init(); return pool ? pool.length : 0; },
+    free(){ init(); if (pool) return pool.filter(s => !s.busy).length; return mainBusy ? 0 : 1; },
+    // fn: name of a CORE function; args may hold a progress callback, which a worker cannot take (it gets null)
+    async run(fn, args, useWorker){
+      if (useWorker){ init(); const slot = pool && pool.find(s => !s.busy);
+        if (slot){
+          const clean = args.map(a => typeof a === 'function' ? null : a);
+          return new Promise((resolve, reject) => {
+            const id = nextId++; slot.busy = true;
+            jobs.set(id, { resolve, reject, retry: () => { Promise.resolve().then(() => onMain(fn, clean)).then(resolve, reject); } });
+            try { slot.w.postMessage({ id, fn, args: clean }); } catch (e) { jobs.delete(id); slot.busy = false; Promise.resolve().then(() => onMain(fn, clean)).then(resolve, reject); }
+          });
+        }
+      }
+      mainBusy = true;
+      try { return await onMain(fn, args); } finally { mainBusy = false; }
+    }
+  };
+})();
+// frames per second over the last few finished pictures
+function makeRate(){ const t = []; return { tick(){ t.push(performance.now()); if (t.length > 12) t.shift(); }, get fps(){ return t.length < 2 ? 0 : (t.length - 1) * 1000 / (t[t.length - 1] - t[0]); }, reset(){ t.length = 0; } }; }
+</script><!--/par-->
 <!--live--><script>
-// keeps cracking whatever is on the air, as fast as the computer allows; the picture lags a little behind
+// keeps cracking whatever is on the air: every free core takes the newest picture; the picture lags a little behind
 (() => {
   const btn = document.getElementById('btnCrack'); if (!btn || document.getElementById('btnLiveCrack')) return;
   const lb = document.createElement('button');
   lb.type = 'button'; lb.className = 'btn'; lb.id = 'btnLiveCrack'; lb.setAttribute('aria-pressed', 'false'); lb.textContent = 'Doorlopend kraken';
   btn.after(lb);
-  let on = false, busy = false, avg = 0;
-  const stop = () => { on = false; lb.setAttribute('aria-pressed', 'false'); lb.textContent = 'Doorlopend kraken'; };
+  let on = false, sent = 0, shown = 0, lastCh = null, gen = 0;
+  const rate = makeRate();
+  const stop = () => { on = false; gen++; lb.setAttribute('aria-pressed', 'false'); lb.textContent = 'Doorlopend kraken'; };
   lb.addEventListener('click', () => {
     if (on){ stop(); return; }
-    on = true; avg = 0; lb.setAttribute('aria-pressed', 'true'); lb.textContent = 'Stop met kraken';
+    on = true; gen++; rate.reset(); lb.setAttribute('aria-pressed', 'true'); lb.textContent = 'Stop met kraken';
     state.crack = null; setPaused(false);
   });
-  btn.addEventListener('click', e => { if (e.isTrusted) stop(); }, true);    // one picture by hand stops the stream
+  btn.addEventListener('click', e => { if (e.isTrusted) stop(); }, true);
   for (const id of ['tab-tx', 'tab-rx']){ const t = document.getElementById(id); if (t) t.addEventListener('click', stop); }
-  async function once(){
-    busy = true; const t0 = performance.now();
-    try { await btn.onclick(null, true); } catch (e) {}
-    const dt = performance.now() - t0; avg = avg ? 0.8 * avg + 0.2 * dt : dt;
-    if (on && state.crack) state.crack.score = (state.crack.score ? state.crack.score + ' · ' : '') + (1000 / avg).toFixed(1) + ' beelden/s';
-    busy = false;
-    if (on) render();
+  function dispatch(){
+    const ch = state.channel, info = state.chInfo, truth = state.chTrue;
+    if (!info || ch === lastCh || !liveOk(info)) return;
+    lastCh = ch; const seq = ++sent, g = gen;
+    crackJob(ch, info, truth, true).then(res => {
+      if (!on || g !== gen) return;
+      rate.tick();
+      if (seq > shown){ shown = seq; res.score = (res.score ? res.score + ' · ' : '') + rate.fps.toFixed(1) + ' beelden/s'; state.crack = res; render(); }
+    }).catch(() => {});
   }
   const orig = step;
   step = function(){
     orig();
-    if (on && state.view === 'crack' && !state.paused && !state.cracking && !busy) once();
+    if (on && state.view === 'crack' && !state.paused && !state.cracking) while (PAR.free() > 0 && state.channel !== lastCh) dispatch();
   };
 })();
 </script><!--/live-->
