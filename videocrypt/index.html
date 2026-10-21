@@ -92,7 +92,7 @@ footer a{color:inherit}
 .bezel.crtgl{border-radius:22px;padding:14px}
 .bezel.crtgl .screen{border-radius:18px / 22px}
 .bezel.crtgl canvas#out{visibility:hidden}
-.bezel.crt.os canvas#out{transform:scale(1.124,1.098)}
+.bezel.os canvas#out{transform:scale(1.124,1.098)}
 .range{width:100%;accent-color:var(--led)}
 .vcr{display:flex;flex-wrap:wrap;gap:6px}
 .vcr .btn{flex:1 1 0;min-width:0;padding-inline:4px;font-family:var(--font-mono),system-ui,sans-serif}
@@ -197,7 +197,7 @@ body.fslock{overflow:hidden}
       <label class="toggle"><input type="checkbox" id="optPal" checked> PAL-kleurdraaiing nabootsen</label>
       <label class="toggle"><input type="checkbox" id="optFrame" checked> Elk beeld nieuwe snijpunten</label>
       <label class="toggle"><input type="checkbox" id="optCrt"> CRT-beeldbuis nabootsen</label>
-      <label class="toggle" id="lblOverscan" hidden><input type="checkbox" id="optOverscan" checked> Overscan: de randen en de datastreep vallen buiten beeld, zoals op een beeldbuis</label>
+      <label class="toggle" id="lblOverscan"><input type="checkbox" id="optOverscan"> Overscan: de randen en de datastreep vallen buiten beeld, zoals op een beeldbuis</label>
       <label class="toggle"><input type="checkbox" id="optNeg"> Negatief: het beeld is alleen te zien als de scrambling aan staat</label>
       <div class="sys" role="radiogroup" aria-label="Systeem">
         <label class="toggle"><input type="radio" name="sys" id="sysVc" value="vc" checked> VideoCrypt: elke lijn rondgedraaid</label>
@@ -1420,14 +1420,13 @@ function setCrt(on){
   const gl = on && CRT.start($('out'));
   if (!on) CRT.stop();
   CRT.overscan = $('optOverscan').checked;
-  $('lblOverscan').hidden = !on;
   bz.classList.toggle('crtgl', !!gl);
   bz.classList.toggle('crt', on && !gl);                  // without WebGL: the simple CSS version
-  bz.classList.toggle('os', on && CRT.overscan);
+  bz.classList.toggle('os', CRT.overscan);
   try { localStorage.setItem('crt', on ? '1' : '0'); } catch (e) {}
 }
 CRT.onfail = () => { if ($('optCrt').checked) setCrt(true); };
-try { if (localStorage.getItem('overscan') === '0') $('optOverscan').checked = false; } catch (e) {}
+try { if (localStorage.getItem('overscan') === '1') $('optOverscan').checked = true; } catch (e) {}
 $('optOverscan').addEventListener('change', e => { try { localStorage.setItem('overscan', e.target.checked ? '1' : '0'); } catch (x) {} setCrt($('optCrt').checked); });
 try { if (localStorage.getItem('crt') === '1') $('optCrt').checked = true; } catch (e) {}
 setCrt($('optCrt').checked);
